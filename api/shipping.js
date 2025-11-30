@@ -1,12 +1,10 @@
-import fetch from "node-fetch";
-
-const CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=1070360000&single=true&output=csv";
-
 export default async function handler(req, res) {
   try {
-    const csv = await fetch(CSV_URL).then(r => r.text());
-    const rows = parseCSV(csv);
+    const CSV_URL =
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=1070360000&single=true&output=csv";
+
+    const text = await fetch(CSV_URL).then(r => r.text());
+    const rows = parseCSV(text);
 
     const { all, key, summary } = req.query;
 
@@ -24,10 +22,13 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, data: rows });
 
-  } catch (e) {
-    return res.status(500).json({ ok: false, msg: e.message });
+  } catch (err) {
+    return res.status(500).json({ ok: false, msg: err.message });
   }
 }
+
+
+// ---- 아래는 날짜/CSV 유틸 ----
 
 function clean(str) {
   if (!str) return "";
@@ -39,27 +40,28 @@ function clean(str) {
 }
 
 function parseCSV(text) {
-  const lines = text.split(/\r?\n/).slice(1);
+  const lines = text.split(/\r?\n/);
   const out = [];
 
-  for (let line of lines) {
-    if (!line.trim()) continue;
-
-    const c = safeParse(line);
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i];
+    if (!row.trim()) continue;
+    const c = safeParse(row);
 
     out.push({
-      invoice:   clean(c[0]), 
-      type:      clean(c[10]),
-      container: clean(c[9]),
-      cbm:       clean(c[11]),
-      date:      clean(c[3]),
-      country:   clean(c[4]),
-      work:      clean(c[15]),
-      location:  clean(c[16]),
-      pallet:    clean(c[18]),
-      time:      clean(c[19]),
+      invoice:   clean(c[0]),  // A
+      date:      clean(c[3]),  // D
+      country:   clean(c[4]),  // E
+      container: clean(c[9]),  // J
+      type:      clean(c[10]), // K
+      cbm:       clean(c[11]), // L
+      work:      clean(c[15]), // P
+      location:  clean(c[16]), // Q
+      pallet:    clean(c[18]), // S
+      time:      clean(c[19]), // T
     });
   }
+
   return out;
 }
 
@@ -79,60 +81,59 @@ function calcSummary(rows) {
   const today = getDate(0);
   const tomorrow = getDate(1);
 
-  let t20=0,t40=0,tL=0;
-  let n20=0,n40=0,nL=0;
+  let t20=0,t40=0,tLCL=0;
+  let n20=0,n40=0,nLCL=0;
 
   rows.forEach(r => {
-    const d = clean(r.date);
-    const J = clean(r.container).toUpperCase();
-
-    if (!d) return;
-
-    const dash = d.replace(/\./g, "-");
+    const dash = r.date.replace(/\./g, "-");
+    const cont = r.container.toUpperCase();
 
     if (dash === today) {
-      if (J.includes("20")) t20++;
-      else if (J.includes("40")) t40++;
-      else if (J.includes("LCL")) tL++;
+      if (cont.includes("20")) t20++;
+      else if (cont.includes("40")) t40++;
+      else if (cont.includes("LCL")) tLCL++;
     }
 
     if (dash === tomorrow) {
-      if (J.includes("20")) n20++;
-      else if (J.includes("40")) n40++;
-      else if (J.includes("LCL")) nL++;
+      if (cont.includes("20")) n20++;
+      else if (cont.includes("40")) n40++;
+      else if (cont.includes("LCL")) nLCL++;
     }
   });
 
   return {
-    today:    { pt20: t20, pt40: t40, lcl: tL },
-    tomorrow: { pt20: n20, pt40: n40, lcl: nL }
+    today:    { pt20: t20, pt40: t40, lcl: tLCL },
+    tomorrow: { pt20: n20, pt40: n40, lcl: nLCL }
   };
 }
 
 function filterKey(rows, key) {
   const k = clean(key);
 
+  // 인보이스 (A)
   if (/^\d{6,9}$/.test(k)) {
-    return rows.filter(r => clean(r.invoice).includes(k));
+    return rows.filter(r => r.invoice.includes(k));
   }
 
+  // YYYYMMDD → YYYY.MM.DD
   if (/^\d{8}$/.test(k)) {
-    const d = `${k.substring(0,4)}.${k.substring(4,6)}.${k.substring(6,8)}`;
-    return rows.filter(r => clean(r.date) === d);
+    const d = `${k.slice(0,4)}.${k.slice(4,6)}.${k.slice(6)}`;
+    return rows.filter(r => r.date === d);
   }
 
+  // MMDD → 부분 날짜 검색
   if (/^\d{3,4}$/.test(k)) {
-    return rows.filter(r => clean(r.date).replace(/[.]/g,"").endsWith(k));
+    return rows.filter(r => r.date.replace(/\./g,"").endsWith(k));
   }
 
-  const lower = k.toLowerCase();
+  // 국가/기타 문자열 검색
   return rows.filter(r =>
-    Object.values(r).some(v => clean(v).toLowerCase().includes(lower))
+    Object.values(r).some(v => String(v).toLowerCase().includes(k.toLowerCase()))
   );
 }
 
 function getDate(add) {
   const d = new Date();
   d.setDate(d.getDate() + add);
-  return d.toISOString().substring(0,10);
+  return d.toISOString().split("T")[0];
 }
