@@ -67,31 +67,37 @@
 
     <!-- ▣ 상세내역 -->
     <section class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-      <div class="px-4 py-3 border-b border-slate-300 text-sm text-[#0A1833] font-semibold">상세내역</div>
+  <div class="px-4 py-3 border-b border-slate-300 text-sm text-[#0A1833] font-semibold">상세내역</div>
 
-      <div class="max-h-[65vh] overflow-auto">
-        <table class="min-w-full text-[13px]">
-          <thead class="bg-slate-50 border-b border-[#0A1833] text-[#0A1833] sticky top-0">
-            <tr class="whitespace-nowrap">
+  <div class="max-h-[65vh] overflow-auto">
+    <table class="min-w-full text-[13px]">
+      <thead class="bg-slate-50 border-b border-[#0A1833] text-[#0A1833] sticky top-0">
+        <tr class="whitespace-nowrap">
 
-              <th class="px-3 py-2 text-left">인보이스</th>
-              <th class="px-3 py-2 text-left">국가</th>
-              <th class="px-3 py-2 text-left">출고일</th>
-              <th class="px-3 py-2 text-left">자재코드</th>
-              <th class="px-3 py-2 text-left">박스</th>
-              <th class="px-3 py-2 text-left">자재내역</th>
-              <th class="px-3 py-2 text-right">출고</th>
-              <th class="px-3 py-2 text-right">입고</th>
-              <th class="px-3 py-2 text-right">비교</th>
-              <th class="px-3 py-2 text-left">작업</th>
+          <!-- ◼ 인보이스: sticky 고정 -->
+          <th class="px-3 py-2 text-left bg-white sticky left-0 z-20">인보이스</th>
 
-            </tr>
-          </thead>
-          <tbody id="stockTableBody" class="divide-y divide-slate-200"></tbody>
-        </table>
-      </div>
+          <th class="px-3 py-2 text-left">국가</th>
+          <th class="px-3 py-2 text-left">출고일</th>
+          <th class="px-3 py-2 text-left nowrap">자재코드</th>
+          <th class="px-3 py-2 text-left nowrap">박스</th>
+          <th class="px-3 py-2 text-left max-w-[180px] overflow-hidden text-ellipsis nowrap">
+            자재내역
+          </th>
+          <th class="px-3 py-2 text-right nowrap">출고</th>
+          <th class="px-3 py-2 text-right nowrap">입고</th>
+          <th class="px-3 py-2 text-right nowrap">비교</th>
+          <th class="px-3 py-2 text-left nowrap">작업</th>
 
-    </section>
+        </tr>
+      </thead>
+
+      <tbody id="stockTableBody" class="divide-y divide-slate-200"></tbody>
+    </table>
+  </div>
+
+</section>
+
 
   </main>
 
