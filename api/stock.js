@@ -1,46 +1,38 @@
-// /api/stock.js  (Vercel Functions)
+// api/stock.js
+import { parseCsv } from "../utils/csv_parser.js";
+
 export default async function handler(req, res) {
   try {
     const { key } = req.query;
 
     if (!key) {
-      return res.status(400).json({
-        ok: false,
-        error: "검색 키(key)가 없습니다."
-      });
+      return res.status(400).json({ ok: false, msg: "key 없음" });
     }
 
-    const SHEET_URL =
-      "https://docs.google.com/spreadsheets/d/e/2PACX-XXX/pub?gid=0&single=true&output=csv";
+    const CSV_URL =
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=221455512&single=true&output=csv";
 
-    const response = await fetch(SHEET_URL);
+    const response = await fetch(CSV_URL);
     const csvText = await response.text();
 
-    const rows = csvText.split("\n").map(r => r.split(","));
-    const header = rows[0];
-    const dataRows = rows.slice(1);
+    // ⭐ 유연 CSV 파서
+    const { header, rows } = parseCsv(csvText);
 
-    const filtered = dataRows.filter(r =>
-      r.some(col => String(col).toLowerCase().includes(key.toLowerCase()))
+    // 🔎 검색 필터: material, invoice, desc 모두 검색
+    const list = rows.filter((r) =>
+      Object.values(r).some((v) =>
+        String(v ?? "")
+          .toLowerCase()
+          .includes(key.toLowerCase())
+      )
     );
 
-    // 응답 데이터 형태를 rows 배열로 구성
-    const resultRows = filtered.map(r => {
-      let obj = {};
-      header.forEach((h, i) => {
-        obj[h.trim()] = r[i] ? r[i].trim() : "";
-      });
-      return obj;
-    });
-
-    return res.status(200).json({
-      ok: true,
-      rows: resultRows
-    });
+    return res.status(200).json({ ok: true, rows: list });
   } catch (err) {
     return res.status(500).json({
       ok: false,
-      error: err.toString()
+      msg: "서버 오류",
+      error: err.toString(),
     });
   }
 }
