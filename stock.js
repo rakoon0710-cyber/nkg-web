@@ -41,12 +41,15 @@ async function searchStock() {
       return;
     }
 
-    /* 테이블 생성 */
+    /* -----------------------------
+       상세내역 테이블 행 생성
+       (인보이스 sticky + 줄바뀜 없음)
+    ------------------------------*/
     for (const r of rows) {
       const tr = document.createElement("tr");
       tr.className = "border-b border-slate-200 hover:bg-slate-50";
 
-      /* 비교 색상 처리 */
+      /* 비교 컬럼 색상 처리 */
       let diffColor = "";
       let diffText = r.diff;
 
@@ -59,16 +62,34 @@ async function searchStock() {
       }
 
       tr.innerHTML = `
-        <td class="sticky-col px-2 py-1 bg-white">${r.invoice}</td>
-        <td class="px-2 py-1">${r.country}</td>
-        <td class="px-2 py-1">${r.date}</td>
-        <td class="px-2 py-1">${r.material}</td>
-        <td class="px-2 py-1">${r.box}</td>
-        <td class="px-2 py-1 td-ellipsis max-w-[200px]">${r.desc}</td>
-        <td class="px-2 py-1 text-right">${r.outQty.toLocaleString()}</td>
-        <td class="px-2 py-1 text-right">${r.inQty.toLocaleString()}</td>
-        <td class="px-2 py-1 text-right ${diffColor}">${diffText}</td>
-        <td class="px-2 py-1">${r.work}</td>
+        <!-- 인보이스: sticky left -->
+        <td class="px-3 py-2 bg-white sticky left-0 z-20 whitespace-nowrap">
+          ${r.invoice}
+        </td>
+
+        <td class="px-3 py-2 whitespace-nowrap">${r.country}</td>
+        <td class="px-3 py-2 whitespace-nowrap">${r.date}</td>
+        <td class="px-3 py-2 whitespace-nowrap">${r.material}</td>
+        <td class="px-3 py-2 whitespace-nowrap">${r.box}</td>
+
+        <!-- 자재내역: 줄바뀜 없음 + 말줄임 -->
+        <td class="px-3 py-2 whitespace-nowrap max-w-[200px] overflow-hidden text-ellipsis">
+          ${r.desc}
+        </td>
+
+        <td class="px-3 py-2 text-right whitespace-nowrap">
+          ${r.outQty.toLocaleString()}
+        </td>
+
+        <td class="px-3 py-2 text-right whitespace-nowrap">
+          ${r.inQty.toLocaleString()}
+        </td>
+
+        <td class="px-3 py-2 text-right whitespace-nowrap ${diffColor}">
+          ${diffText}
+        </td>
+
+        <td class="px-3 py-2 whitespace-nowrap">${r.work}</td>
       `;
 
       tbody.appendChild(tr);
