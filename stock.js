@@ -6,72 +6,83 @@ const API_URL_STOCK = "https://nkg-web-ptu8.vercel.app/api/stock";
 
 /* 로딩 표시 */
 function showLoading(msg = "조회중...") {
-    document.getElementById("stockStatus").textContent = msg;
+  document.getElementById("stockStatus").textContent = msg;
 }
 
 /* 조회 실행 */
 async function searchStock() {
-    const key = document.getElementById("stockKey").value.trim();
-    const status = document.getElementById("stockStatus");
-    const tbody = document.getElementById("stockTableBody");
+  const key = document.getElementById("stockKey").value.trim();
+  const status = document.getElementById("stockStatus");
+  const tbody = document.getElementById("stockTableBody");
 
-    if (!key) {
-        status.textContent = "조회값을 입력하세요.";
-        tbody.innerHTML = "";
-        return;
-    }
-
-    showLoading("서버에서 불러오는 중...");
+  if (!key) {
+    status.textContent = "조회값을 입력하세요.";
     tbody.innerHTML = "";
+    return;
+  }
 
-    try {
-        const url = `${API_URL_STOCK}?key=${encodeURIComponent(key)}`;
-        const res = await fetch(url);
-        const json = await res.json();
+  showLoading("서버에서 불러오는 중...");
+  tbody.innerHTML = "";
 
-        if (!json.ok) {
-            status.textContent = "서버 오류: " + (json.msg || json.error);
-            return;
-        }
+  try {
+    const url = `${API_URL_STOCK}?key=${encodeURIComponent(key)}`;
+    const res = await fetch(url);
+    const json = await res.json();
 
-        const rows = json.rows;
-
-        if (!rows || rows.length === 0) {
-            status.textContent = "오늘 이후 출고 데이터 없음";
-            return;
-        }
-
-        // 테이블 생성
-        for (const r of rows) {
-            const tr = document.createElement("tr");
-            tr.className = "border-b border-slate-200 hover:bg-slate-50";
-
-            tr.innerHTML = `
-                <td class="hidden-col">${r.keyFull}</td>
-                <td class="px-2 py-1">${r.invoice}</td>
-                <td class="px-2 py-1">${r.country}</td>
-                <td class="px-2 py-1">${r.date}</td>
-                <td class="px-2 py-1">${r.material}</td>
-                <td class="px-2 py-1">${r.box}</td>
-                <td class="px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">${r.desc}</td>
-                <td class="px-2 py-1 text-right">${r.outQty.toLocaleString()}</td>
-                <td class="px-2 py-1 text-right">${r.inQty.toLocaleString()}</td>
-                <td class="px-2 py-1 text-right">${r.diff.toLocaleString()}</td>
-            `;
-
-            tbody.appendChild(tr);
-        }
-
-        status.textContent = `${rows.length}건 조회됨`;
-
-    } catch (err) {
-        console.error(err);
-        status.textContent = "오류: " + err.message;
+    if (!json.ok) {
+      status.textContent = "서버 오류: " + (json.msg || json.error);
+      return;
     }
+
+    const rows = json.rows;
+
+    if (!rows || rows.length === 0) {
+      status.textContent = "오늘 이후 출고 데이터 없음";
+      return;
+    }
+
+    /* 테이블 생성 */
+    for (const r of rows) {
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-slate-200 hover:bg-slate-50";
+
+      /* 비교 색상 처리 */
+      let diffColor = "";
+      let diffText = r.diff;
+
+      if (r.diff === 0 && r.outQty !== 0) {
+        diffText = "입고완료";
+        diffColor = "bg-green-100 text-green-700";
+      }
+      if (r.diff < 0) {
+        diffColor = "bg-red-100 text-red-600 font-semibold";
+      }
+
+      tr.innerHTML = `
+        <td class="sticky-col px-2 py-1 bg-white">${r.invoice}</td>
+        <td class="px-2 py-1">${r.country}</td>
+        <td class="px-2 py-1">${r.date}</td>
+        <td class="px-2 py-1">${r.material}</td>
+        <td class="px-2 py-1">${r.box}</td>
+        <td class="px-2 py-1 td-ellipsis max-w-[200px]">${r.desc}</td>
+        <td class="px-2 py-1 text-right">${r.outQty.toLocaleString()}</td>
+        <td class="px-2 py-1 text-right">${r.inQty.toLocaleString()}</td>
+        <td class="px-2 py-1 text-right ${diffColor}">${diffText}</td>
+        <td class="px-2 py-1">${r.work}</td>
+      `;
+
+      tbody.appendChild(tr);
+    }
+
+    status.textContent = `${rows.length}건 조회됨`;
+  } catch (err) {
+    console.error(err);
+    status.textContent = "오류: " + err.message;
+  }
 }
 
 /* 이벤트 연결 */
 document.getElementById("stockSearchBtn").onclick = searchStock;
 document.getElementById("stockKey").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") searchStock();
+  if (e.key === "Enter") searchStock();
 });
