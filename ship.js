@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-   ship.js — 출고정보 최종 완성본
+   ship.js — 최종 완성본 (날짜조회 제거)
 --------------------------------------------------------- */
 
 const tbody = document.getElementById("shipTableBody");
@@ -15,7 +15,6 @@ const tomLCL = document.getElementById("tom_lcl");
 
 const btnSearch = document.getElementById("shipSearchBtn");
 const btnAll = document.getElementById("btnAll");
-const btnDate = document.getElementById("btnDate");
 
 const API = "/api/shipping";
 
@@ -24,19 +23,16 @@ const API = "/api/shipping";
 
 async function loadSummary() {
   const res = await fetch(`${API}?summary=true`);
-  const json = await res.json();
-  if (!json.ok) return;
+  const { ok, summary } = await res.json();
+  if (!ok) return;
 
-  const t = json.summary.today;
-  const n = json.summary.tomorrow;
+  today20.textContent = summary.today.pt20;
+  today40.textContent = summary.today.pt40;
+  todayLCL.textContent = summary.today.lcl;
 
-  today20.textContent = t.pt20;
-  today40.textContent = t.pt40;
-  todayLCL.textContent = t.lcl;
-
-  tom20.textContent = n.pt20;
-  tom40.textContent = n.pt40;
-  tomLCL.textContent = n.lcl;
+  tom20.textContent = summary.tomorrow.pt20;
+  tom40.textContent = summary.tomorrow.pt40;
+  tomLCL.textContent = summary.tomorrow.lcl;
 }
 
 
@@ -75,13 +71,14 @@ async function loadAll() {
   statusTxt.textContent = "전체 조회 중...";
 
   const res = await fetch(`${API}?all=true`);
-  const json = await res.json();
-  if (!json.ok) {
+  const { ok, data } = await res.json();
+
+  if (!ok) {
     statusTxt.textContent = "전체 조회 실패";
     return;
   }
 
-  renderRows(json.data);
+  renderRows(data);
 }
 
 
@@ -97,43 +94,14 @@ async function searchKeyword() {
   statusTxt.textContent = "검색 중...";
 
   const res = await fetch(`${API}?key=${encodeURIComponent(key)}`);
-  const json = await res.json();
+  const { ok, data } = await res.json();
 
-  if (!json.ok) {
+  if (!ok) {
     statusTxt.textContent = "검색 실패";
     return;
   }
 
-  renderRows(json.data);
-}
-
-
-/* -------------------- 날짜조회 --------------------- */
-
-async function dateSearch() {
-  const pick = prompt("조회 날짜 입력: YYYY-MM-DD 또는 MMDD 또는 1=오늘 2=내일");
-  if (!pick) return;
-
-  let key = pick.trim();
-
-  if (key === "1") key = getDate(0);
-  if (key === "2") key = getDate(1);
-
-  statusTxt.textContent = `${key} 검색 중...`;
-
-  const res = await fetch(`${API}?key=${encodeURIComponent(key)}`);
-  const json = await res.json();
-
-  renderRows(json.data);
-}
-
-
-/* -------------------- 날짜 도우미 --------------------- */
-
-function getDate(add) {
-  const d = new Date();
-  d.setDate(d.getDate() + add);
-  return d.toISOString().split("T")[0];
+  renderRows(data);
 }
 
 
@@ -141,7 +109,6 @@ function getDate(add) {
 
 btnSearch.addEventListener("click", searchKeyword);
 btnAll?.addEventListener("click", loadAll);
-btnDate?.addEventListener("click", dateSearch);
 
 
 /* -------------------- 초기 실행 --------------------- */

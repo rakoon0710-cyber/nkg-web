@@ -8,30 +8,25 @@ export default async function handler(req, res) {
     const csv = await fetch(CSV_URL).then(r => r.text());
     const rows = parseCSV(csv);
 
-    const today = getDate(0);
-
-    // 오늘 이전 데이터 제거
-    const valid = rows.filter(r => r.date && r.date >= today);
-
     const { all, key, summary } = req.query;
 
     // 요약 계산
     if (summary === "true") {
-      return res.status(200).json({ ok: true, summary: calcSummary(valid) });
+      return res.status(200).json({ ok: true, summary: calcSummary(rows) });
     }
 
     // 전체 조회
     if (all === "true") {
-      return res.status(200).json({ ok: true, data: valid });
+      return res.status(200).json({ ok: true, data: rows });
     }
 
-    // 키워드 조회
+    // 키워드 검색
     if (key) {
-      const data = filterKey(valid, key);
+      const data = filterKey(rows, key);
       return res.status(200).json({ ok: true, data });
     }
 
-    return res.status(200).json({ ok: true, data: valid });
+    return res.status(200).json({ ok: true, data: rows });
 
   } catch (e) {
     return res.status(500).json({ ok: false, msg: e.message });
@@ -40,7 +35,7 @@ export default async function handler(req, res) {
 
 
 /* -----------------------------
-   텍스트 → 컬럼 매핑
+   CSV 파싱
 ------------------------------*/
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).slice(1);
@@ -51,16 +46,16 @@ function parseCSV(text) {
     const c = safeParse(line);
 
     out.push({
-      invoice:     c[0],   // A
-      type:        c[10],  // K
-      container:   c[9],   // J
-      cbm:         c[11],  // L
-      date:        c[3],   // D
-      country:     c[4],   // E
-      work:        c[15],  // P
-      location:    c[16],  // Q
-      pallet:      c[18],  // S
-      time:        c[19],  // T
+      invoice:   c[0],  // A
+      type:      c[10], // K
+      container: c[9],  // J
+      cbm:       c[11], // L
+      date:      c[3],  // D (2025.12.01)
+      country:   c[4],  // E
+      work:      c[15], // P
+      location:  c[16], // Q
+      pallet:    c[18], // S
+      time:      c[19], // T
     });
   }
   return out;
@@ -80,26 +75,28 @@ function safeParse(row) {
 
 
 /* -----------------------------
-   요약 계산 (오늘 / 내일)
+   요약 계산
 ------------------------------*/
 function calcSummary(rows) {
   const today = getDate(0);
-  const tom = getDate(1);
+  const tomorrow = getDate(1);
 
   let t20=0,t40=0,tL=0;
   let n20=0,n40=0,nL=0;
 
   rows.forEach(r => {
     if (!r.date) return;
+
+    const d = toDash(r.date); // YYYY-MM-DD
     const J = (r.container || "").toUpperCase();
 
-    if (r.date === today) {
+    if (d === today) {
       if (J.includes("20")) t20++;
       else if (J.includes("40")) t40++;
       else if (J.includes("LCL")) tL++;
     }
 
-    if (r.date === tom) {
+    if (d === tomorrow) {
       if (J.includes("20")) n20++;
       else if (J.includes("40")) n40++;
       else if (J.includes("LCL")) nL++;
@@ -107,46 +104,50 @@ function calcSummary(rows) {
   });
 
   return {
-    today: { pt20: t20, pt40: t40, lcl: tL },
-    tomorrow:{ pt20: n20, pt40: n40, lcl: nL }
+    today:    { pt20: t20, pt40: t40, lcl: tL },
+    tomorrow: { pt20: n20, pt40: n40, lcl: nL }
   };
 }
 
 
 /* -----------------------------
-   부분 검색 / 날짜 검색 / 전체 검색
+   검색 로직 (3종 자동판별)
 ------------------------------*/
 function filterKey(rows, key) {
-  const raw = key.trim();
+  const k = key.trim();
 
-  // 8자리 날짜 YYYYMMDD
-  if (/^\d{8}$/.test(raw)) {
-    const y = raw.substring(0,4);
-    const m = raw.substring(4,6);
-    const d = raw.substring(6,8);
-    const full = `${y}-${m}-${d}`;
-    return rows.filter(r => r.date === full);
+  // ▣ ① 인보이스 검색 (6~9자리 숫자)
+  if (/^\d{6,9}$/.test(k)) {
+    return rows.filter(r => (r.invoice || "").includes(k));
   }
 
-  // 3~4자리 부분 날짜 MMDD
-  if (/^\d{3,4}$/.test(raw)) {
-    return rows.filter(r =>
-      r.date && r.date.replace(/-/g,"").endsWith(raw)
-    );
+  // ▣ ② 날짜검색 (8자리 YYYYMMDD)
+  if (/^\d{8}$/.test(k)) {
+    const D = `${k.substring(0,4)}.${k.substring(4,6)}.${k.substring(6,8)}`;
+    return rows.filter(r => r.date === D);
   }
 
-  // 일반 문자열 검색
-  const lower = raw.toLowerCase();
+  // ▣ ③ 부분날짜 (MMDD)
+  if (/^\d{3,4}$/.test(k)) {
+    return rows.filter(r => r.date && r.date.replace(/[.]/g,"").endsWith(k));
+  }
+
+  // ▣ ④ 국가 / 기타 텍스트 검색
+  const lower = k.toLowerCase();
   return rows.filter(r =>
-    Object.values(r).some(v =>
-      String(v).toLowerCase().includes(lower)
-    )
+    Object.values(r).some(v => String(v).toLowerCase().includes(lower))
   );
 }
 
-/* 날짜 조합 */
+
+/* 날짜 변환 2025.12.01 → 2025-12-01 */
+function toDash(d) {
+  return d.replace(/\./g, "-");
+}
+
+/* 오늘/내일 */
 function getDate(add) {
   const d = new Date();
   d.setDate(d.getDate() + add);
-  return d.toISOString().split("T")[0];
+  return d.toISOString().substring(0,10);
 }
