@@ -1,3 +1,5 @@
+// api/shipping.js — Auto Load Version
+
 export default async function handler(req, res) {
   try {
     const CSV_URL =
@@ -6,37 +8,20 @@ export default async function handler(req, res) {
     const text = await fetch(CSV_URL).then(r => r.text());
     const rows = parseCSV(text);
 
-    const { all, key, summary } = req.query;
+    const todayYmd = getTodayYMD();
 
-    if (summary === "true") {
-      return res.status(200).json({ ok: true, summary: calcSummary(rows) });
-    }
+    const filtered = rows.filter(r => r.ymd >= todayYmd);
+    filtered.sort((a, b) => a.ymd - b.ymd);
 
-    if (all === "true") {
-      return res.status(200).json({ ok: true, data: rows });
-    }
-
-    if (key) {
-      return res.status(200).json({ ok: true, data: filterKey(rows, key) });
-    }
-
-    return res.status(200).json({ ok: true, data: rows });
+    return res.status(200).json({ ok: true, data: filtered });
 
   } catch (err) {
     return res.status(500).json({ ok: false, msg: err.message });
   }
 }
 
-
-// ---- 아래는 날짜/CSV 유틸 ----
-
 function clean(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/\uFEFF/g, "")
-    .replace(/\r/g, "")
-    .replace(/\n/g, "")
-    .trim();
+  return String(str || "").trim();
 }
 
 function parseCSV(text) {
@@ -46,19 +31,24 @@ function parseCSV(text) {
   for (let i = 1; i < lines.length; i++) {
     const row = lines[i];
     if (!row.trim()) continue;
+
     const c = safeParse(row);
 
+    const dateStr = clean(c[3]);
+    const ymd = convertToYMD(dateStr);
+
     out.push({
-      invoice:   clean(c[0]),  // A
-      date:      clean(c[3]),  // D
-      country:   clean(c[4]),  // E
-      container: clean(c[9]),  // J
-      type:      clean(c[10]), // K
-      cbm:       clean(c[11]), // L
-      work:      clean(c[15]), // P
-      location:  clean(c[16]), // Q
-      pallet:    clean(c[18]), // S
-      time:      clean(c[19]), // T
+      date: dateStr,
+      ymd,
+      invoice: clean(c[0]),
+      country: clean(c[4]),
+      container: clean(c[9]),
+      type: clean(c[10]),
+      cbm: clean(c[11]),
+      work: clean(c[15]),
+      location: clean(c[16]),
+      pallet: clean(c[18]),
+      time: clean(c[19]),
     });
   }
 
@@ -77,63 +67,20 @@ function safeParse(row) {
   return out;
 }
 
-function calcSummary(rows) {
-  const today = getDate(0);
-  const tomorrow = getDate(1);
-
-  let t20=0,t40=0,tLCL=0;
-  let n20=0,n40=0,nLCL=0;
-
-  rows.forEach(r => {
-    const dash = r.date.replace(/\./g, "-");
-    const cont = r.container.toUpperCase();
-
-    if (dash === today) {
-      if (cont.includes("20")) t20++;
-      else if (cont.includes("40")) t40++;
-      else if (cont.includes("LCL")) tLCL++;
-    }
-
-    if (dash === tomorrow) {
-      if (cont.includes("20")) n20++;
-      else if (cont.includes("40")) n40++;
-      else if (cont.includes("LCL")) nLCL++;
-    }
-  });
-
-  return {
-    today:    { pt20: t20, pt40: t40, lcl: tLCL },
-    tomorrow: { pt20: n20, pt40: n40, lcl: nLCL }
-  };
+function convertToYMD(str) {
+  if (!str) return 0;
+  const s = str.replace(/\s+/g, "");
+  if (s.includes(".")) {
+    const [y, m, d] = s.split(".");
+    return Number(`${y}${m.padStart(2,"0")}${d.padStart(2,"0")}`);
+  }
+  return 0;
 }
 
-function filterKey(rows, key) {
-  const k = clean(key);
-
-  // 인보이스 (A)
-  if (/^\d{6,9}$/.test(k)) {
-    return rows.filter(r => r.invoice.includes(k));
-  }
-
-  // YYYYMMDD → YYYY.MM.DD
-  if (/^\d{8}$/.test(k)) {
-    const d = `${k.slice(0,4)}.${k.slice(4,6)}.${k.slice(6)}`;
-    return rows.filter(r => r.date === d);
-  }
-
-  // MMDD → 부분 날짜 검색
-  if (/^\d{3,4}$/.test(k)) {
-    return rows.filter(r => r.date.replace(/\./g,"").endsWith(k));
-  }
-
-  // 국가/기타 문자열 검색
-  return rows.filter(r =>
-    Object.values(r).some(v => String(v).toLowerCase().includes(k.toLowerCase()))
-  );
-}
-
-function getDate(add) {
+function getTodayYMD() {
   const d = new Date();
-  d.setDate(d.getDate() + add);
-  return d.toISOString().split("T")[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return Number(`${y}${m}${day}`);
 }
