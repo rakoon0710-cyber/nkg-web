@@ -1,4 +1,4 @@
-// api/shipping.js — Final Stable Version (padStart Error 0%)
+// api/shipping.js — Final Stable Version
 
 export default async function handler(req, res) {
   try {
@@ -10,10 +10,7 @@ export default async function handler(req, res) {
 
     const todayYmd = getTodayYMD();
 
-    // 오늘 이후만 필터
     const filtered = rows.filter(r => r.ymd >= todayYmd);
-
-    // 날짜순 정렬
     filtered.sort((a, b) => a.ymd - b.ymd);
 
     return res.status(200).json({ ok: true, data: filtered });
@@ -24,9 +21,7 @@ export default async function handler(req, res) {
 }
 
 
-/* ------------------------------
-   CSV 파싱
------------------------------- */
+// -------------------- CSV 파싱 --------------------
 function parseCSV(text) {
   const lines = text.split(/\r?\n/);
   const out = [];
@@ -36,24 +31,23 @@ function parseCSV(text) {
     if (!row.trim()) continue;
 
     const c = safeParse(row);
-
     const safe = (idx) => (c[idx] !== undefined ? clean(c[idx]) : "");
 
     const dateStr = safe(3);
-    const ymd = convertToYMD(dateStr);   // 여기서 오류 0%
+    const ymd = convertToYMD(dateStr);
 
     out.push({
       ymd,
-      date:      safe(3),   // D
-      invoice:   safe(0),   // A
-      country:   safe(4),   // E
-      location:  safe(16),  // Q
-      pallet:    safe(18),  // S
-      time:      safe(19),  // T
-      cbm:       safe(11),  // L
-      container: safe(9),   // J
-      work:      safe(15),  // P
-      type:      safe(10),  // K
+      date:      safe(3),
+      invoice:   safe(0),
+      country:   safe(4),
+      location:  safe(16),
+      pallet:    safe(18),
+      time:      safe(19),
+      cbm:       safe(11),
+      container: safe(9),
+      work:      safe(15),
+      type:      safe(10),
     });
   }
 
@@ -61,9 +55,7 @@ function parseCSV(text) {
 }
 
 
-/* ------------------------------
-   CSV 안전 파서
------------------------------- */
+// -------------------- CSV 안전 파서 --------------------
 function safeParse(row) {
   let out = [], cur = "", inside = false;
 
@@ -79,31 +71,24 @@ function safeParse(row) {
 }
 
 
-/* ------------------------------
-   날짜 변환 (완전 보호 버전)
------------------------------- */
+// -------------------- 날짜 변환 완전 안정 버전 --------------------
 function convertToYMD(str) {
   if (!str) return 0;
 
   const s = String(str).trim();
-  if (!/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(s)) {
-    return 0; // 날짜 형식이 아니면 무조건 제외
-  }
 
-  const parts = s.split(".");
-  if (parts.length !== 3) return 0;
+  const match = s.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/);
+  if (!match) return 0;
 
-  const y = parts[0];
-  const m = (parts[1] || "0").padStart(2, "0");
-  const d = (parts[2] || "0").padStart(2, "0");
+  const y = match[1];
+  const m = match[2].padStart(2, "0");
+  const d = match[3].padStart(2, "0");
 
   return Number(`${y}${m}${d}`);
 }
 
 
-/* ------------------------------
-   기타 유틸
------------------------------- */
+// -------------------- 기타 유틸 --------------------
 function clean(str) {
   if (!str) return "";
   return String(str)
