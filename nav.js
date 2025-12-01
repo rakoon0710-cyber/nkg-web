@@ -12,6 +12,7 @@ document.write(`
           <a href="index.html" class="hover:text-sky-400">메인</a>
           <a href="index_defect.html" class="hover:text-sky-400">결품조회</a>
           <a href="index_stock.html" class="hover:text-sky-400">재고조회</a>
+          <a href="index_shipping.html" class="hover:text-sky-400 ">출고정보</a>
         </div>
 
         <button id="navToggle" class="md:hidden text-2xl">☰</button>
@@ -22,6 +23,7 @@ document.write(`
       <a href="index.html" class="block hover:text-sky-300">메인</a>
       <a href="index_defect.html" class="block hover:text-sky-300">결품조회</a>
       <a href="index_stock.html" class="block hover:text-sky-300">재고조회</a>
+      <a href="index_shipping.html" class="block hover:text-sky-300 ">출고정보</a>
     </div>
   </nav>
 
