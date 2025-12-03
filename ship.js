@@ -1,9 +1,10 @@
-// ship.js — 출고정보 자동로드 + 필터 + 정렬 + 날짜 변환 + 유형 색상 태그
+// ship.js — 색상 태그 + 필터 유지 + 정렬 + 날짜 변환 + D-1 강조 + hover
 
 const tbody = document.getElementById("shipTableBody");
 const statusTxt = document.getElementById("shipStatus");
 
-let shipData = []; // 전체 저장용
+// 전체 데이터 저장
+let shipData = [];
 
 // 날짜 포맷 통일: "2025. 12. 3" → "2025-12-03"
 function normalizeDate(str) {
@@ -16,14 +17,53 @@ function normalizeDate(str) {
 }
 
 // 유형 색상 태그
-function renderTypeTag(type) {
-  if (type === "수출") {
+function typeTag(type) {
+  if (type === "수출")
     return `<span class="px-2 py-1 rounded-lg bg-blue-100 text-blue-700 font-semibold">${type}</span>`;
-  }
-  if (type === "배송") {
+  if (type === "배송")
     return `<span class="px-2 py-1 rounded-lg bg-green-100 text-green-700 font-semibold">${type}</span>`;
-  }
   return `<span class="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 font-semibold">${type}</span>`;
+}
+
+// 컨테이너 색상 태그
+function containerTag(text) {
+  const t = text.toUpperCase();
+  if (t.includes("20"))
+    return `<span class="px-2 py-1 rounded bg-orange-100 text-orange-700 font-semibold">${text}</span>`;
+  if (t.includes("40"))
+    return `<span class="px-2 py-1 rounded bg-purple-100 text-purple-700 font-semibold">${text}</span>`;
+  return `<span class="px-2 py-1 rounded bg-slate-200 text-slate-700 font-semibold">${text}</span>`;
+}
+
+// 파레트 색상 태그 (마지막 번호 기준)
+function palletTag(text) {
+  const num = parseInt(String(text).replace(/[^0-9]/g, ""));
+  if (isNaN(num)) return text;
+
+  const colors = [
+    "bg-blue-100 text-blue-700",
+    "bg-green-100 text-green-700",
+    "bg-yellow-100 text-yellow-700",
+    "bg-red-100 text-red-700",
+    "bg-indigo-100 text-indigo-700",
+    "bg-teal-100 text-teal-700",
+    "bg-pink-100 text-pink-700",
+    "bg-purple-100 text-purple-700",
+    "bg-orange-100 text-orange-700",
+    "bg-slate-200 text-slate-700"
+  ];
+
+  const idx = num % colors.length;
+  return `<span class="px-2 py-1 rounded font-semibold ${colors[idx]}">${text}</span>`;
+}
+
+// 출고일 D-1 강조
+function isDminus1(dateNorm) {
+  const today = new Date();
+  const d1 = new Date(dateNorm);
+
+  const diff = (d1 - today) / (1000 * 60 * 60 * 24);
+  return Math.floor(diff) === -1; // D-1
 }
 
 // ▣ 1) 서버에서 데이터 불러오기
@@ -34,10 +74,7 @@ async function loadData() {
     const res = await fetch("/api/shipping");
     const { ok, data } = await res.json();
 
-    if (!ok) {
-      statusTxt.textContent = "불러오기 실패";
-      return;
-    }
+    if (!ok) return (statusTxt.textContent = "불러오기 실패");
 
     shipData = data.map(row => ({
       ...row,
@@ -52,12 +89,11 @@ async function loadData() {
   }
 }
 
-// ▣ 2) 정렬 (날짜 → 수출 우선)
+// ▣ 2) 정렬 (날짜 오름차순 → 수출 우선)
 function sortList(list) {
   return [...list].sort((a, b) => {
     const d1 = new Date(a.dateNorm);
     const d2 = new Date(b.dateNorm);
-
     if (d1 - d2 !== 0) return d1 - d2;
 
     const priority = { "수출": 1, "배송": 2 };
@@ -72,26 +108,35 @@ function renderTable(list) {
 
   sorted.forEach((r, i) => {
     const tr = document.createElement("tr");
-    if (i % 2 === 1) tr.classList.add("bg-slate-50");
+
+    // 행 hover 하이라이트
+    tr.classList.add("hover:bg-sky-50", "transition");
+
+    // D-1 강조 (노란 배경)
+    if (isDminus1(r.dateNorm)) {
+      tr.classList.add("bg-yellow-50");
+    } else if (i % 2 === 1) {
+      tr.classList.add("bg-slate-50");
+    }
 
     tr.innerHTML = `
       <td class="px-3 py-2 border-b">${r.date}</td>
       <td class="px-3 py-2 border-b">${r.invoice}</td>
       <td class="px-3 py-2 border-b">${r.country}</td>
       <td class="px-3 py-2 border-b">${r.location}</td>
-      <td class="px-3 py-2 border-b">${r.pallet}</td>
+      <td class="px-3 py-2 border-b">${palletTag(r.pallet)}</td>
       <td class="px-3 py-2 border-b">${r.time}</td>
       <td class="px-3 py-2 border-b">${r.cbm}</td>
-      <td class="px-3 py-2 border-b">${r.container}</td>
+      <td class="px-3 py-2 border-b">${containerTag(r.container)}</td>
       <td class="px-3 py-2 border-b">${r.work}</td>
-      <td class="px-3 py-2 border-b">${renderTypeTag(r.type)}</td>
+      <td class="px-3 py-2 border-b">${typeTag(r.type)}</td>
     `;
 
     tbody.appendChild(tr);
   });
 }
 
-// ▣ 4) 필터 (출고일 + 인보이스 + 유형)
+// ▣ 4) 필터: 출고일 + 인보이스 + 유형
 document.getElementById("btnSearch")?.addEventListener("click", () => {
   const fDate = document.getElementById("filterDate").value;
   const fInv = document.getElementById("filterInvoice").value.trim();
@@ -108,8 +153,13 @@ document.getElementById("btnSearch")?.addEventListener("click", () => {
   statusTxt.textContent = `${filtered.length}건 표시됨`;
 });
 
-// ▣ 5) 전체 조회
+// ▣ 5) 전체 조회 (필터 초기화)
 document.getElementById("btnAll")?.addEventListener("click", () => {
+  // 필터값 리셋
+  document.getElementById("filterDate").value = "";
+  document.getElementById("filterInvoice").value = "";
+  document.getElementById("filterType").value = "";
+
   renderTable(shipData);
   statusTxt.textContent = `${shipData.length}건 표시됨`;
 });
