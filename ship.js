@@ -119,13 +119,20 @@ async function loadData() {
     const res = await fetch("/api/shipping");
     const { ok, data } = await res.json();
 
-    if (!ok) return statusTxt.textContent = "불러오기 실패";
+    if (!ok) return (statusTxt.textContent = "불러오기 실패");
 
     shipData = data.map(row => ({
       ...row,
       dateNorm: normalizeDate(row.date),
       timeNorm: normalizeTime(row.time)
     }));
+
+    // 🔥 오늘 이전 날짜 자동 제외
+    const today = new Date();
+    shipData = shipData.filter(v => {
+      const d = new Date(v.dateNorm);
+      return d >= new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    });
 
     renderTable(shipData);
     statusTxt.textContent = `${shipData.length}건 표시됨`;
@@ -134,6 +141,7 @@ async function loadData() {
     statusTxt.textContent = "서버 오류";
   }
 }
+
 
 // ▣ 2) 정렬 강화 (날짜 → 유형 → 위치 → 상차시간)
 function sortList(list) {
