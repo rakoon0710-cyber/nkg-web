@@ -6,29 +6,114 @@
   <title>남경 검수시스템 · 홈</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-slate-100 min-h-screen">
+
   <!-- 네비게이션 -->
   <script src="nav.js"></script>
 
-  <main class="max-w-md mx-auto px-4 py-6 space-y-4">
-    <div class="text-sm text-slate-600">사용할 기능을 선택하세요.</div>
+  <main class="max-w-md mx-auto px-4 pt-4 space-y-6">
 
-    <div class="space-y-3">
-
-      <!-- 출고정보 버튼 추가 -->
-      <a href="index_shipping.html" class="block bg-white p-4 rounded-xl shadow border">
-        출고정보
-      </a>
-
-      <a href="index_defect.html" class="block bg-white p-4 rounded-xl shadow border">
-        결품조회
-      </a>
-
-      <a href="index_stock.html" class="block bg-white p-4 rounded-xl shadow border">
-        재고조회
-      </a>
-
+    <!-- 🔹 상단 타이틀 -->
+    <div class="text-center">
+      <div id="pageTitle" class="text-lg font-semibold tracking-tight">
+        출고·입고 작업 현황 ㅣ <span id="visitCount"></span>
+      </div>
+      <div class="text-xs text-slate-500 mt-1">
+        남경 · 실시간 검수 시스템
+      </div>
     </div>
+
+    <!-- 🔹 쿠팡 스타일 카드 이미지 영역 -->
+    <div class="space-y-4">
+
+      <!-- 오늘/내일 출고 카드 -->
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="text-base font-semibold mb-3">오늘 출고</div>
+
+        <div class="grid grid-cols-3 text-center text-sm">
+          <div>
+            <div class="font-bold text-slate-700">20PT</div>
+            <div class="text-slate-500">5대</div>
+          </div>
+
+          <div>
+            <div class="font-bold text-slate-700">40PT</div>
+            <div class="text-slate-500">5대</div>
+          </div>
+
+          <div>
+            <div class="font-bold text-slate-700">LCL</div>
+            <div class="text-slate-500">5대</div>
+          </div>
+        </div>
+
+        <!-- 구분선 -->
+        <div class="my-4 border-t"></div>
+
+        <div class="text-base font-semibold mb-3">내일 출고</div>
+        <div class="grid grid-cols-3 text-center text-sm">
+          <div>
+            <div class="font-bold text-slate-700">20PT</div>
+            <div class="text-slate-500">5대</div>
+          </div>
+
+          <div>
+            <div class="font-bold text-slate-700">40PT</div>
+            <div class="text-slate-500">5대</div>
+          </div>
+
+          <div>
+            <div class="font-bold text-slate-700">LCL</div>
+            <div class="text-slate-500">5대</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 당일 결품 / 이슈 -->
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="text-base font-semibold mb-3">당일 결품 / 검수 이슈</div>
+
+        <div class="flex justify-between text-sm px-2">
+          <div class="font-medium">결품</div>
+          <div class="text-slate-700">3건</div>
+        </div>
+
+        <div class="flex justify-between text-sm px-2 mt-2">
+          <div class="font-medium">긴급</div>
+          <div class="text-red-500 font-semibold">3건</div>
+        </div>
+
+        <div class="flex justify-between text-sm px-2 mt-2">
+          <div class="font-medium">완료</div>
+          <div class="text-green-600 font-semibold">3건</div>
+        </div>
+      </div>
+
+      <!-- 출고검수 버튼 -->
+      <a href="index_shipping.html"
+         class="block bg-white rounded-2xl shadow p-4 text-center font-semibold text-slate-700">
+        출고검수
+      </a>
+    </div>
+
   </main>
+
+
+  <!-- 🔹 오늘 접속자 카운터 스크립트 -->
+  <script>
+    const today = new Date().toISOString().slice(0, 10);  // yyyy-mm-dd
+    const savedDate = localStorage.getItem("visit_date");
+    let count = Number(localStorage.getItem("visit_count") || 0);
+
+    if (savedDate !== today) count = 0;   // 날짜 바뀌면 리셋
+    count++;
+
+    localStorage.setItem("visit_date", today);
+    localStorage.setItem("visit_count", count);
+
+    document.getElementById("visitCount").textContent = count;
+  </script>
+
 </body>
 </html>
