@@ -1,4 +1,8 @@
-// /api/stock.js — Stable Serverless Version (정렬 + 오늘이전 제외 + MM/DD 지원 + ReferenceError 방지)
+// /api/stock.js — FINAL (연도 추정 금지, 공백 포함 날짜 파싱 강화)
+// ✅ 출고일은 원본 그대로 사용 (예: "2025. 12. 01")
+// ✅ 필터/정렬은 "연도 포함 날짜"만 인정
+// ✅ MM/DD(연도 없음)로 내려오는 행은 제외(무결성 유지)
+// ✅ 오늘 이전 제외 + ✅ 출고일 기준 정렬 + ✅ 안전 length
 
 export default async function handler(req, res) {
   try {
@@ -58,27 +62,30 @@ export default async function handler(req, res) {
       // work(r[18])까지 쓰므로 최소 19칸 필요
       if (!r || r.length < 19) continue;
 
-      const keyFull = clean(r[0]); // 인보이스+자재코드
+      const keyFull = clean(r[0]);
       const invoice = clean(r[1]);
-      const dateStr = clean(r[4]); // 출고일 (Google Sheets 표시가 12/01로 나올 수 있음)
+      const dateStr = clean(r[4]); // 출고일 (원본 그대로 저장)
+
+      // ✅ 연도 포함 날짜만 파싱 (공백/점/하이픈/슬래시 허용)
       const ymd = convertToYMD(dateStr);
 
-      // ✅ 오늘 이전 출고 제외 (날짜 파싱 실패도 제외)
-      if (!ymd || ymd < today) continue;
+      // ✅ 연도 없는 날짜(MM/DD 등)는 제외 (무결성)
+      if (!ymd) continue;
+
+      // ✅ 오늘 이전 출고 제외
+      if (ymd < today) continue;
 
       const country = clean(r[5]);
-      const material = clean(r[6]); // 자재코드
-      const desc = clean(r[7]); // 자재내역
-      const outQty = toNumber(r[8]); // 출고수량
-      const box = clean(r[9]); // 박스번호
-      const work = clean(r[18]); // 작업
+      const material = clean(r[6]);
+      const desc = clean(r[7]);
+      const outQty = toNumber(r[8]);
+      const box = clean(r[9]);
+      const work = clean(r[18]);
 
       // 검색 조건
       if (isNumericSearch) {
-        // 숫자 검색 → 자재코드 매칭
         if (material !== searchKey) continue;
       } else {
-        // 문자 검색 → 박스번호 매칭 (대소문자 무시)
         if (box.toUpperCase() !== searchKey.toUpperCase()) continue;
       }
 
@@ -89,7 +96,7 @@ export default async function handler(req, res) {
         keyFull,
         invoice,
         country,
-        date: dateStr,
+        date: dateStr, // ✅ 표시: 원본 그대로 (예: "2025. 12. 1")
         material,
         box,
         desc,
@@ -97,33 +104,20 @@ export default async function handler(req, res) {
         inQty,
         diff,
         work,
+        _ymd: ymd, // ✅ 정렬용 숫자
       });
     }
 
     // ✅ 출고일 기준 오름차순 정렬 (빠른 날짜 → 늦은 날짜)
-    matched.sort((a, b) => {
-      const da = convertToYMD(a.date) || 99999999;
-      const db = convertToYMD(b.date) || 99999999;
-      if (da !== db) return da - db;
+    matched.sort((a, b) => a._ymd - b._ymd);
 
-      // 같은 날짜면 안정 정렬
-      const ia = String(a.invoice || "");
-      const ib = String(b.invoice || "");
-      if (ia !== ib) return ia.localeCompare(ib, "ko");
-
-      const ma = String(a.material || "");
-      const mb = String(b.material || "");
-      if (ma !== mb) return ma.localeCompare(mb, "ko");
-
-      const बा = String(a.box || "");
-      const bb = String(b.box || "");
-      return बा.localeCompare(bb, "ko");
-    });
+    // _ymd 제거(응답 깔끔하게)
+    const data = matched.map(({ _ymd, ...rest }) => rest);
 
     return res.status(200).json({
       ok: true,
-      rows: matched.length,
-      data: matched,
+      rows: data.length,
+      data,
     });
   } catch (err) {
     console.error("STOCK API ERROR:", err);
@@ -187,36 +181,23 @@ function toNumber(v) {
 }
 
 /**
- * 날짜를 yyyymmdd(Number)로 변환
- * - "YYYY.MM.DD" / "YYYY-MM-DD" / "YYYY/MM/DD" 지원
- * - "MM/DD" / "MM-DD" 지원 (연도는 현재 연도로 가정)
- * 파싱 실패하면 0
+ * ✅ 연도 포함 날짜만 허용 (공백 포함 강력 지원)
+ * - "2025. 12. 1" / "2025.12.01" / "2025-12-1" / "2025/12/01" 모두 OK
+ * - "12/01" 같은 연도 없는 값은 0 반환 (제외)
  */
 function convertToYMD(str) {
   if (!str) return 0;
   const s = String(str).trim();
-  const thisYear = new Date().getFullYear();
 
-  // YYYY.MM.DD / YYYY-MM-DD / YYYY/MM/DD
-  let m = s.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);
-  if (m) {
-    const y = m[1];
-    const mo = m[2].padStart(2, "0");
-    const d = m[3].padStart(2, "0");
-    const ymd = Number(`${y}${mo}${d}`);
-    return Number.isFinite(ymd) ? ymd : 0;
-  }
+  const m = s.match(/^(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})$/);
+  if (!m) return 0;
 
-  // MM/DD or MM-DD → 올해 기준
-  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
-  if (m) {
-    const mo = m[1].padStart(2, "0");
-    const d = m[2].padStart(2, "0");
-    const ymd = Number(`${thisYear}${mo}${d}`);
-    return Number.isFinite(ymd) ? ymd : 0;
-  }
+  const y = m[1];
+  const mo = String(m[2]).padStart(2, "0");
+  const d = String(m[3]).padStart(2, "0");
 
-  return 0;
+  const ymd = Number(`${y}${mo}${d}`);
+  return Number.isFinite(ymd) ? ymd : 0;
 }
 
 function getTodayYMD() {
@@ -226,6 +207,3 @@ function getTodayYMD() {
   const day = String(d.getDate()).padStart(2, "0");
   return Number(`${y}${m}${day}`);
 }
-
-
-
