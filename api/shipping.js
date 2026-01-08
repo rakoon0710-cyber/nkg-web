@@ -1,13 +1,13 @@
-// /api/shipping.js — Stable Serverless Version (최종본)
+// /api/shipping.js ??Stable Serverless Version (최종�?
 
 export default async function handler(req, res) {
   try {
     const CSV_URL =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=1070360000&single=true&output=csv";
 
-    // 1) CSV 요청
+    // 1) CSV ?�청
     const resp = await fetch(CSV_URL);
-    if (!resp.ok) throw new Error("CSV 요청 실패: " + resp.status);
+    if (!resp.ok) throw new Error("CSV ?�청 ?�패: " + resp.status);
 
     const text = await resp.text();
     const rows = parseCSV(text);
@@ -21,35 +21,35 @@ export default async function handler(req, res) {
 
     const result = [];
 
-    // 2) 데이터 파싱
+    // 2) ?�이???�싱
     for (const r of bodyRows) {
       if (!r || r.length < 20) continue;
 
       const safe = (i) => clean(r[i] ?? "");
 
-      const dateStr = safe(3);          // D열: 출고일
+      const dateStr = safe(3);          // D?? 출고??
       const ymd = convertToYMD(dateStr);
       if (!ymd) continue;
 
-      // 오늘 이전 출고 제외
+      // ?�늘 ?�전 출고 ?�외
       if (ymd < today) continue;
 
       result.push({
         ymd,
-        date: dateStr,           // 출고일
-        invoice: safe(0),        // 인보이스
-        country: safe(4),        // 국가
-        location: safe(16),      // 상차위치
-        pallet: safe(18),        // 파레트
-        time: safe(19),          // 상차시간
+        date: dateStr,           // 출고??
+        invoice: safe(0),        // ?�보?�스
+        country: safe(4),        // �??
+        location: safe(16),      // ?�차?�치
+        pallet: safe(18),        // ?�레??
+        time: safe(19),          // ?�차?�간
         cbm: safe(11),           // CBM
-        container: safe(9),      // 컨테이너
-        work: safe(15),          // 작업여부
-        type: safe(10),          // 유형
+        container: safe(9),      // 컨테?�너
+        work: safe(15),          // ?�업?��?
+        type: safe(10),          // ?�형
       });
     }
 
-    // 3) 날짜 기준 정렬 (기본)
+    // 3) ?�짜 기�? ?�렬 (기본)
     result.sort((a, b) => a.ymd - b.ymd);
 
     return res.status(200).json({ ok: true, data: result });
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
 }
 
 /* ============================================================
-   공통 유틸
+   공통 ?�틸
 ============================================================ */
 
 function parseCSV(text) {

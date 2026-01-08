@@ -1,4 +1,4 @@
-// /api/defect.js — Stable Serverless Version (최종본)
+// /api/defect.js ??Stable Serverless Version (최종�?
 
 export default async function handler(req, res) {
   try {
@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     if (!key) {
       return res.status(400).json({
         ok: false,
-        msg: "검색 키(key)가 없습니다. 예: /api/defect?key=775803",
+        msg: "검????key)가 ?�습?�다. ?? /api/defect?key=775803",
       });
     }
 
@@ -23,17 +23,17 @@ export default async function handler(req, res) {
 
     // 1) SAP CSV
     const sapResp = await fetch(SAP_URL);
-    if (!sapResp.ok) throw new Error("SAP CSV 요청 실패");
+    if (!sapResp.ok) throw new Error("SAP CSV ?�청 ?�패");
     const sapText = await sapResp.text();
     const sapRows = parseCSV(sapText).slice(1);
 
     // 2) WMS CSV
     const wmsResp = await fetch(WMS_URL);
-    if (!wmsResp.ok) throw new Error("WMS CSV 요청 실패");
+    if (!wmsResp.ok) throw new Error("WMS CSV ?�청 ?�패");
     const wmsText = await wmsResp.text();
     const wmsRows = parseCSV(wmsText).slice(1);
 
-    // 3) WMS map 생성 (keyFull → 합계수량)
+    // 3) WMS map ?�성 (keyFull ???�계?�량)
     const wmsMap = new Map();
     for (const r of wmsRows) {
       if (!r || r.length < 5) continue;
@@ -49,18 +49,18 @@ export default async function handler(req, res) {
     for (const r of sapRows) {
       if (!r || r.length < 15) continue;
 
-      const keyFull = clean(r[0]);  // 인보이스 + 자재코드
-      const invoice = clean(r[1]);  // 인보이스
-      const dateStr = clean(r[4]);  // 출고일
+      const keyFull = clean(r[0]);  // ?�보?�스 + ?�재코드
+      const invoice = clean(r[1]);  // ?�보?�스
+      const dateStr = clean(r[4]);  // 출고??
       const ymd = convertToYMD(dateStr);
 
-      // 인보이스 불일치 skip
+      // ?�보?�스 불일�?skip
       if (invoice !== invoiceKey) continue;
 
-      // 오늘 이전 출고 제외
+      // ?�늘 ?�전 출고 ?�외
       if (ymd && ymd < today) continue;
 
-      // SAP 필드들
+      // SAP ?�드??
       const country = clean(r[5]);
       const material = clean(r[6]);
       const desc = clean(r[7]);
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       const note = clean(r[23]);
       const work = clean(r[18]);
 
-      // WMS 입고수량
+      // WMS ?�고?�량
       const inQty = toNumber(wmsMap.get(keyFull));
       const diff = inQty - outQty;
 
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
 }
 
 /* ============================================================
-   공통 유틸
+   공통 ?�틸
 ============================================================ */
 
 function parseCSV(text) {

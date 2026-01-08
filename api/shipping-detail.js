@@ -1,6 +1,6 @@
-// api/shipping-detail.js — 출고 상세내역 최적화 안정판
+// api/shipping-detail.js ??출고 ?�세?�역 최적???�정??
 
-// 정확한 SAP & WMS CSV URL (오타 제거된 버전)
+// ?�확??SAP & WMS CSV URL (?��? ?�거??버전)
 const SAP_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=221455512&single=true&output=csv";
 
@@ -10,28 +10,28 @@ const WMS_CSV_URL =
 export default async function handler(req, res) {
   try {
     /* ----------------------------------------------------
-       1) invoice 정규화
+       1) invoice ?�규??
     ---------------------------------------------------- */
     let invoice = String(req.query.invoice || "").trim();
-    invoice = invoice.replace(/[^0-9]/g, ""); // 숫자만 사용
+    invoice = invoice.replace(/[^0-9]/g, ""); // ?�자�??�용
 
     if (!invoice) {
-      return res.status(400).json({ ok: false, msg: "invoice 값이 없습니다." });
+      return res.status(400).json({ ok: false, msg: "invoice 값이 ?�습?�다." });
     }
 
     /* ----------------------------------------------------
-       2) CSV 데이터 로드
+       2) CSV ?�이??로드
     ---------------------------------------------------- */
     const [sapText, wmsText] = await Promise.all([
       (await fetch(SAP_CSV_URL)).text(),
       (await fetch(WMS_CSV_URL)).text(),
     ]);
 
-    const sapRows = parseCSV(sapText).slice(1); // 헤더 제외
+    const sapRows = parseCSV(sapText).slice(1); // ?�더 ?�외
     const wmsRows = parseCSV(wmsText).slice(1);
 
     /* ----------------------------------------------------
-       3) WMS → Map(keyFull → 입고수량 합계)
+       3) WMS ??Map(keyFull ???�고?�량 ?�계)
     ---------------------------------------------------- */
     const wmsMap = new Map();
 
@@ -39,33 +39,33 @@ export default async function handler(req, res) {
       const keyFull = clean(r[0]);
       if (!keyFull) continue;
 
-      const qty = toNumber(r[4]); // WMS 입고수량
+      const qty = toNumber(r[4]); // WMS ?�고?�량
       wmsMap.set(keyFull, (wmsMap.get(keyFull) || 0) + qty);
     }
 
     /* ----------------------------------------------------
-       4) SAP → invoice 필터 + 상세내역 구성
+       4) SAP ??invoice ?�터 + ?�세?�역 구성
     ---------------------------------------------------- */
     const result = [];
 
     for (const r of sapRows) {
-      const keyFull = clean(r[0]); // A열
-      const inv = clean(r[1]).replace(/[^0-9]/g, ""); // B열 (정규화)
+      const keyFull = clean(r[0]); // A??
+      const inv = clean(r[1]).replace(/[^0-9]/g, ""); // B??(?�규??
 
-      if (inv !== invoice) continue; // 인보이스 필터
+      if (inv !== invoice) continue; // ?�보?�스 ?�터
 
-      const date = clean(r[4]);      // 출고일 (E)
-      const country = clean(r[5]);   // 국가   (F)
-      const code = clean(r[6]);      // 자재코드 (G)
-      const name = clean(r[7]);      // 자재내역 (H)
-      const outQty = toNumber(r[8]); // 출고수량 (I)
+      const date = clean(r[4]);      // 출고??(E)
+      const country = clean(r[5]);   // �??   (F)
+      const code = clean(r[6]);      // ?�재코드 (G)
+      const name = clean(r[7]);      // ?�재?�역 (H)
+      const outQty = toNumber(r[8]); // 출고?�량 (I)
       const box = clean(r[9]);       // 박스번호 (J)
-      const work = clean(r[18]);     // 작업여부 (S)
-      const container = clean(r[14]);// 컨테이너 (O)
+      const work = clean(r[18]);     // ?�업?��? (S)
+      const container = clean(r[14]);// 컨테?�너 (O)
       const cbm = clean(r[19]);      // CBM     (T)
-      const note = clean(r[23]);     // 특이사항 (X)
+      const note = clean(r[23]);     // ?�이?�항 (X)
 
-      // WMS 입고수량 매칭
+      // WMS ?�고?�량 매칭
       const inQty = toNumber(wmsMap.get(keyFull));
       const diff = inQty - outQty;
 
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
 }
 
 /* ============================================================
-   CSV 파서 (정확도 100%, 큰파일도 문제 없음)
+   CSV ?�서 (?�확??100%, ?�파?�도 문제 ?�음)
 ============================================================ */
 function parseCSV(text) {
   text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -132,7 +132,7 @@ function parseCSV(text) {
 }
 
 /* ============================================================
-   문자열 정리
+   문자???�리
 ============================================================ */
 function clean(str) {
   if (!str) return "";
@@ -143,7 +143,7 @@ function clean(str) {
 }
 
 /* ============================================================
-   숫자 변환
+   ?�자 변??
 ============================================================ */
 function toNumber(v) {
   if (!v) return 0;
