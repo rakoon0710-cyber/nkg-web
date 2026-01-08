@@ -1,21 +1,21 @@
-// /api/stock.js ??FINAL (?�도 추정 금�?, 공백 ?�함 ?�짜 ?�싱 강화)
-// ??출고?��? ?�본 그�?�??�용 (?? "2025. 12. 01")
-// ???�터/?�렬?� "?�도 ?�함 ?�짜"�??�정
-// ??MM/DD(?�도 ?�음)�??�려?�는 ?��? ?�외(무결???��?)
-// ???�늘 ?�전 ?�외 + ??출고??기�? ?�렬 + ???�전 length
+// /api/stock.js — FINAL (연도 추정 금지, 공백 포함 날짜 파싱 강화)
+// ✅ 출고일은 원본 그대로 사용 (예: "2025. 12. 01")
+// ✅ 필터/정렬은 "연도 포함 날짜"만 인정
+// ✅ MM/DD(연도 없음)로 내려오는 행은 제외(무결성 유지)
+// ✅ 오늘 이전 제외 + ✅ 출고일 기준 정렬 + ✅ 안전 length
 
 export default async function handler(req, res) {
   try {
     const { key } = req.query;
     if (!key) {
-      return res.status(400).json({ ok: false, msg: "검???��? ?�습?�다." });
+      return res.status(400).json({ ok: false, msg: "검색 키가 없습니다." });
     }
 
     const searchKey = String(key).trim();
-    const isNumericSearch = /^[0-9]+$/.test(searchKey); // ?�자�??�재코드, ?�니�?박스
+    const isNumericSearch = /^[0-9]+$/.test(searchKey); // 숫자면 자재코드, 아니면 박스
     const today = getTodayYMD();
 
-    // ?�� SAP & WMS CSV URL
+    // 📌 SAP & WMS CSV URL
     const SAP_CSV_URL =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=221455512&single=true&output=csv";
 
@@ -23,29 +23,29 @@ export default async function handler(req, res) {
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=1850233363&single=true&output=csv";
 
     // ======================
-    // 1) SAP CSV ?�기
+    // 1) SAP CSV 읽기
     // ======================
     const sapResp = await fetch(SAP_CSV_URL);
-    if (!sapResp.ok) throw new Error("SAP CSV ?�청 ?�패");
+    if (!sapResp.ok) throw new Error("SAP CSV 요청 실패");
     const sapText = await sapResp.text();
-    const sapRows = parseCSV(sapText).slice(1); // ?�더 ?�외
+    const sapRows = parseCSV(sapText).slice(1); // 헤더 제외
 
     // ======================
-    // 2) WMS CSV ?�기
+    // 2) WMS CSV 읽기
     // ======================
     const wmsResp = await fetch(WMS_CSV_URL);
-    if (!wmsResp.ok) throw new Error("WMS CSV ?�청 ?�패");
+    if (!wmsResp.ok) throw new Error("WMS CSV 요청 실패");
     const wmsText = await wmsResp.text();
     const wmsRows = parseCSV(wmsText).slice(1);
 
     // ======================
-    // 3) WMS ?�고?�량 �??�성 (keyFull 기�?)
+    // 3) WMS 입고수량 맵 생성 (keyFull 기준)
     // ======================
     const wmsMap = new Map();
     for (const r of wmsRows) {
       if (!r || r.length < 5) continue;
 
-      const keyFull = clean(r[0]); // ?�보?�스+?�재코드
+      const keyFull = clean(r[0]); // 인보이스+자재코드
       const qty = toNumber(r[4]);
 
       if (keyFull) {
@@ -54,25 +54,25 @@ export default async function handler(req, res) {
     }
 
     // ======================
-    // 4) SAP + WMS 결합 & ?�터�?
+    // 4) SAP + WMS 결합 & 필터링
     // ======================
     const matched = [];
 
     for (const r of sapRows) {
-      // work(r[18])까�? ?��?�?최소 19�??�요
+      // work(r[18])까지 쓰므로 최소 19칸 필요
       if (!r || r.length < 19) continue;
 
       const keyFull = clean(r[0]);
       const invoice = clean(r[1]);
-      const dateStr = clean(r[4]); // 출고??(?�본 그�?�??�??
+      const dateStr = clean(r[4]); // 출고일 (원본 그대로 저장)
 
-      // ???�도 ?�함 ?�짜�??�싱 (공백/???�이???�래???�용)
+      // ✅ 연도 포함 날짜만 파싱 (공백/점/하이픈/슬래시 허용)
       const ymd = convertToYMD(dateStr);
 
-      // ???�도 ?�는 ?�짜(MM/DD ?????�외 (무결??
+      // ✅ 연도 없는 날짜(MM/DD 등)는 제외 (무결성)
       if (!ymd) continue;
 
-      // ???�늘 ?�전 출고 ?�외
+      // ✅ 오늘 이전 출고 제외
       if (ymd < today) continue;
 
       const country = clean(r[5]);
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
       const box = clean(r[9]);
       const work = clean(r[18]);
 
-      // 검??조건
+      // 검색 조건
       if (isNumericSearch) {
         if (material !== searchKey) continue;
       } else {
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
         keyFull,
         invoice,
         country,
-        date: dateStr, // ???�시: ?�본 그�?�?(?? "2025. 12. 1")
+        date: dateStr, // ✅ 표시: 원본 그대로 (예: "2025. 12. 1")
         material,
         box,
         desc,
@@ -104,14 +104,14 @@ export default async function handler(req, res) {
         inQty,
         diff,
         work,
-        _ymd: ymd, // ???�렬???�자
+        _ymd: ymd, // ✅ 정렬용 숫자
       });
     }
 
-    // ??출고??기�? ?�름차순 ?�렬 (빠른 ?�짜 ????? ?�짜)
+    // ✅ 출고일 기준 오름차순 정렬 (빠른 날짜 → 늦은 날짜)
     matched.sort((a, b) => a._ymd - b._ymd);
 
-    // _ymd ?�거(?�답 깔끔?�게)
+    // _ymd 제거(응답 깔끔하게)
     const data = matched.map(({ _ymd, ...rest }) => rest);
 
     return res.status(200).json({
@@ -126,7 +126,7 @@ export default async function handler(req, res) {
 }
 
 /* ====================================================================
-   공통 ?�틸
+   공통 유틸
 ==================================================================== */
 
 function parseCSV(text) {
@@ -181,9 +181,9 @@ function toNumber(v) {
 }
 
 /**
- * ???�도 ?�함 ?�짜�??�용 (공백 ?�함 강력 지??
+ * ✅ 연도 포함 날짜만 허용 (공백 포함 강력 지원)
  * - "2025. 12. 1" / "2025.12.01" / "2025-12-1" / "2025/12/01" 모두 OK
- * - "12/01" 같�? ?�도 ?�는 값�? 0 반환 (?�외)
+ * - "12/01" 같은 연도 없는 값은 0 반환 (제외)
  */
 function convertToYMD(str) {
   if (!str) return 0;

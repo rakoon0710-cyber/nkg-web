@@ -1,4 +1,4 @@
-import { loadCsv } from "../lib/_csv.js";
+import { loadCsv } from "./_csv.js";
 
 const CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAWmUNAeyndXfdxHjR-1CakW_Tm3OzmMTng5RkB53umXwucqpxABqMMcB0y8H5cHNg7aoHYqFztz0F/pub?gid=221455512&single=true&output=csv";
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
     // 개별 조회
     if (mat) {
-      result = rows.find(r => r["?�재번호"] === mat.trim());
+      result = rows.find(r => r["자재번호"] === mat.trim());
     }
 
     return res.status(200).json({ ok: true, data: result });
