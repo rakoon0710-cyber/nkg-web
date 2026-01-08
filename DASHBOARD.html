@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>대시보드 · 남경 검수시스템</title>
+
+  <!-- ✅ Tailwind (안정: CSS 링크 방식) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+
+  <style>
+    body { background:#eef1f5; }
+    .card { background:#fff; border:1px solid #f1f5f9; border-radius:14px; box-shadow:0 1px 2px rgba(15,23,42,.06); }
+    .chip { border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; font-size:11px; padding:.1rem .5rem; color:#475569; }
+    .label { font-size:11px; color:#64748b; }
+    .small { font-size:11px; color:#64748b; }
+    .num { font-weight:800; color:#0f172a; }
+    .nowrap { white-space:nowrap; }
+
+    /* ✅ PC 상시표시용 컴팩트 */
+    .pad { padding:12px; }
+    .title { font-size:14px; font-weight:700; color:#0f172a; }
+    .sub { font-size:11px; color:#94a3b8; margin-top:2px; }
+    .kpiNum { font-size:18px; font-weight:800; color:#0f172a; line-height:1.1; margin-top:6px; }
+    .kpiUnit { font-size:11px; color:#94a3b8; }
+    .tbl th { font-size:11px; color:#64748b; }
+    .tbl td { font-size:12px; color:#334155; }
+  </style>
+</head>
+
+<body class="flex justify-center">
+  <div class="w-full max-w-[1300px] min-h-screen bg-[#f8fafc] flex flex-col text-slate-900">
+
+    <!-- 상단바(임시) -->
+    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-100 px-4 md:px-8 py-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center text-xs font-bold">NK</div>
+          <div>
+            <div class="text-sm font-semibold leading-tight">남경 검수시스템</div>
+            <div class="text-[11px] text-slate-400 leading-tight">Dashboard (PC Compact)</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="chip">기준일: <span id="dash_date" class="font-semibold text-slate-700">2025-12-22</span></span>
+          <a href="index.html" class="chip hover:bg-slate-50">← 메인</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="w-full px-4 md:px-8 py-4 space-y-3">
+
+      <!-- 타이틀 -->
+      <section class="flex items-end justify-between">
+        <div>
+          <div class="text-xs text-slate-500 mb-1">대시보드</div>
+          <div class="text-base md:text-lg font-semibold tracking-tight">보수/입고/출고 통합 현황</div>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[11px] border border-sky-100">
+          상시표시(PC 최적)
+        </span>
+      </section>
+
+      <!-- 1) 보수작업현황 -->
+      <section class="card pad">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="title">보수작업현황</div>
+            <div class="sub">당월 누적 / 일 목표 / 전일 / 평균</div>
+          </div>
+          <span class="chip">단위: 장</span>
+        </div>
+
+        <div class="grid grid-cols-3 lg:grid-cols-6 gap-2 mt-3">
+          <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+            <div class="label">당월 작업량 합계</div>
+            <div class="kpiNum" id="fix_month_total">2,000,000</div>
+            <div class="kpiUnit">장</div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+            <div class="label">작업진행량</div>
+            <div class="kpiNum" id="fix_progress">1,000,000</div>
+            <div class="kpiUnit">장</div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+            <div class="label">작업진행률</div>
+            <div class="kpiNum" id="fix_rate">50%</div>
+            <div class="kpiUnit">당월 기준</div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+            <div class="label">일목표작업량</div>
+            <div class="kpiNum" id="fix_target_day">100,000</div>
+            <div class="kpiUnit">장/일</div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+            <div class="label">전일 작업량</div>
+            <div class="kpiNum" id="fix_yesterday">100,000</div>
+            <div class="kpiUnit">장 <span id="fix_delta" class="ml-1 font-semibold text-emerald-600">(+0)</span></div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+            <div class="label">평균 작업량</div>
+            <div class="kpiNum" id="fix_avg">110,000</div>
+            <div class="kpiUnit">장/일</div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+            <span>당월 진행률</span>
+            <span><span id="fix_bar_a">1,000,000</span> / <span id="fix_bar_b">2,000,000</span> 장</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-100">
+            <div id="fix_bar" class="h-full bg-sky-500" style="width:50%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2) 입고 + 출고(예정/진행) -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+
+        <!-- 입고 -->
+        <div class="card pad">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="title">입고</div>
+              <div class="sub">입고예정 / 진행 / 진행률</div>
+            </div>
+            <span class="chip">BOX</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3">
+            <div class="rounded-2xl bg-white border border-slate-100 px-3 py-2">
+              <div class="label">입고예정</div>
+              <div class="kpiNum" id="in_plan">200,000</div>
+              <div class="kpiUnit">BOX</div>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-100 px-3 py-2">
+              <div class="label">입고진행</div>
+              <div class="kpiNum" id="in_done">100,000</div>
+              <div class="kpiUnit">BOX</div>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-100 px-3 py-2">
+              <div class="label">진행률</div>
+              <div class="kpiNum" id="in_rate">50%</div>
+              <div class="kpiUnit">예정 대비</div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+              <span>입고 진행률</span>
+              <span><span id="in_bar_a">100,000</span> / <span id="in_bar_b">200,000</span></span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-100">
+              <div id="in_bar" class="h-full bg-emerald-500" style="width:50%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 출고 예정 -->
+        <div class="card pad">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="title">출고 예정</div>
+              <div class="sub">20FT / 40FT / LCL</div>
+            </div>
+            <span class="chip">대</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3">
+            <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2 text-center">
+              <div class="label">20FT</div>
+              <div class="kpiNum" id="out_plan_20">10</div>
+              <div class="kpiUnit">대</div>
+            </div>
+            <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2 text-center">
+              <div class="label">40FT</div>
+              <div class="kpiNum" id="out_plan_40">10</div>
+              <div class="kpiUnit">대</div>
+            </div>
+            <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2 text-center">
+              <div class="label">LCL</div>
+              <div class="kpiNum" id="out_plan_lcl">10</div>
+              <div class="kpiUnit">대</div>
+            </div>
+          </div>
+
+          <div class="mt-3 rounded-2xl bg-sky-50 border border-sky-100 px-3 py-2 text-[11px] text-sky-800">
+            합계: <span id="out_plan_total" class="font-semibold">30</span>대
+          </div>
+        </div>
+
+        <!-- 출고 진행 -->
+        <div class="card pad">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="title">출고 진행</div>
+              <div class="sub">진행 수량 + 진행률</div>
+            </div>
+            <span class="chip">대</span>
+          </div>
+
+          <div class="space-y-2 mt-3">
+
+            <div class="rounded-2xl bg-white border border-slate-100 px-3 py-2">
+              <div class="flex items-center justify-between">
+                <div class="text-[12px] font-semibold text-slate-800">20FT</div>
+                <div class="text-[11px] text-slate-500">
+                  <span id="out_done_20" class="font-semibold text-slate-700">9</span>대
+                  <span class="ml-2 font-semibold text-emerald-600" id="out_rate_20">90%</span>
+                </div>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-100 mt-2">
+                <div id="out_bar_20" class="h-full bg-emerald-500" style="width:90%"></div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-white border border-slate-100 px-3 py-2">
+              <div class="flex items-center justify-between">
+                <div class="text-[12px] font-semibold text-slate-800">40FT</div>
+                <div class="text-[11px] text-slate-500">
+                  <span id="out_done_40" class="font-semibold text-slate-700">1</span>대
+                  <span class="ml-2 font-semibold text-amber-600" id="out_rate_40">10%</span>
+                </div>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-100 mt-2">
+                <div id="out_bar_40" class="h-full bg-amber-500" style="width:10%"></div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-white border border-slate-100 px-3 py-2">
+              <div class="flex items-center justify-between">
+                <div class="text-[12px] font-semibold text-slate-800">LCL</div>
+                <div class="text-[11px] text-slate-500">
+                  <span id="out_done_lcl" class="font-semibold text-slate-700">10</span>대
+                  <span class="ml-2 font-semibold text-sky-600" id="out_rate_lcl">100%</span>
+                </div>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-100 mt-2">
+                <div id="out_bar_lcl" class="h-full bg-sky-500" style="width:100%"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- 3) 7일 출고 + 월별 계획 + 뉴스 -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-3 pb-8">
+
+        <!-- 7일 출고 -->
+        <div class="card pad lg:col-span-1">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="title">오늘 기준 7일 출고정보</div>
+              <div class="sub">일자별 20FT / 40FT / LCL</div>
+            </div>
+            <span class="chip">대</span>
+          </div>
+
+          <div class="mt-3 overflow-auto" style="max-height:240px;">
+            <table class="w-full tbl">
+              <thead>
+                <tr class="border-b border-slate-100">
+                  <th class="text-left py-2 nowrap">일자</th>
+                  <th class="text-right py-2 nowrap">20FT</th>
+                  <th class="text-right py-2 nowrap">40FT</th>
+                  <th class="text-right py-2 nowrap">LCL</th>
+                </tr>
+              </thead>
+              <tbody id="ship7_tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="mt-3 rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2 text-[11px] text-slate-700">
+            7일 합계:
+            <span class="font-semibold" id="ship7_sum_20">7</span> /
+            <span class="font-semibold" id="ship7_sum_40">7</span> /
+            <span class="font-semibold" id="ship7_sum_lcl">7</span>
+            <span class="ml-2 text-slate-500">총</span>
+            <span class="font-semibold" id="ship7_sum_total">21</span>대
+          </div>
+        </div>
+
+        <!-- 월별 계획 -->
+        <div class="card pad lg:col-span-1">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="title">월별 계획</div>
+              <div class="sub">20FT / 40FT / LCL</div>
+            </div>
+            <span class="chip">대</span>
+          </div>
+
+          <div class="mt-3 overflow-auto">
+            <table class="w-full tbl">
+              <thead>
+                <tr class="border-b border-slate-100">
+                  <th class="text-left py-2">월</th>
+                  <th class="text-right py-2">20FT</th>
+                  <th class="text-right py-2">40FT</th>
+                  <th class="text-right py-2">LCL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2 font-semibold">12월</td>
+                  <td class="py-2 text-right font-semibold" id="plan_dec_20">10</td>
+                  <td class="py-2 text-right font-semibold" id="plan_dec_40">10</td>
+                  <td class="py-2 text-right font-semibold" id="plan_dec_lcl">10</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-semibold">1월</td>
+                  <td class="py-2 text-right font-semibold" id="plan_jan_20">10</td>
+                  <td class="py-2 text-right font-semibold" id="plan_jan_40">10</td>
+                  <td class="py-2 text-right font-semibold" id="plan_jan_lcl">10</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3">
+            <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+              <div class="label">12월 합계</div>
+              <div class="text-[13px] font-bold text-slate-800" id="plan_dec_total">30대</div>
+            </div>
+            <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+              <div class="label">1월 합계</div>
+              <div class="text-[13px] font-bold text-slate-800" id="plan_jan_total">30대</div>
+            </div>
+            <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+              <div class="label">2개월 합계</div>
+              <div class="text-[13px] font-bold text-slate-800"><span id="plan_total">60</span>대</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 뉴스 (2탭 느낌: 한 카드에 두 섹션) -->
+        <div class="card pad lg:col-span-1">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="title">뉴스 스크롤링</div>
+              <div class="sub">사고/재난/안전 + 실시간</div>
+            </div>
+            <span class="chip">스크롤</span>
+          </div>
+
+          <div class="mt-3 space-y-2">
+            <div>
+              <div class="text-[12px] font-semibold text-slate-700">뉴스1 · 사고/재난/안전</div>
+              <div class="mt-2 space-y-2 max-h-40 overflow-auto pr-1" id="news_safety">
+                <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+                  <div class="text-[12px] font-semibold text-slate-800">[샘플] 안전 관련 뉴스 제목</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5">2025-12-22 · 출처</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100">
+              <div class="text-[12px] font-semibold text-slate-700">뉴스2 · 실시간뉴스</div>
+              <div class="mt-2 space-y-2 max-h-40 overflow-auto pr-1" id="news_live">
+                <div class="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+                  <div class="text-[12px] font-semibold text-slate-800">[샘플] 실시간 뉴스 타이틀</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5">2025-12-22 · 출처</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+<script>
+  // =========================
+  // ✅ 데이터(샘플) - 나중에 CSV로 교체
+  // =========================
+  const DATA = {
+    fix: {
+      month_total: 2000000,
+      progress: 1000000,
+      target_day: 100000,
+      yesterday: 100000,
+      yesterday_delta: 0,     // 등락 (+/- 장)
+      avg: 110000
+    },
+    inbound: {
+      plan: 200000,
+      done: 100000
+    },
+    outboundPlan: { ft20:10, ft40:10, lcl:10 },
+    outboundDone: { ft20:9, ft40:1, lcl:10 },
+    ship7: [
+      { date:"2025.12.22", ft20:1, ft40:1, lcl:1 },
+      { date:"2025.12.23", ft20:1, ft40:1, lcl:1 },
+      { date:"2025.12.24", ft20:1, ft40:1, lcl:1 },
+      { date:"2025.12.25", ft20:1, ft40:1, lcl:1 },
+      { date:"2025.12.26", ft20:1, ft40:1, lcl:1 },
+      { date:"2025.12.27", ft20:1, ft40:1, lcl:1 },
+      { date:"2025.12.28", ft20:1, ft40:1, lcl:1 },
+    ],
+    monthlyPlan: {
+      dec: { ft20:10, ft40:10, lcl:10 },
+      jan: { ft20:10, ft40:10, lcl:10 }
+    }
+  };
+
+  const nf = (n) => Number(n || 0).toLocaleString();
+
+  // 기준일
+  (function setDate(){
+    const d = new Date();
+    const yy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    document.getElementById("dash_date").textContent = `${yy}-${mm}-${dd}`;
+  })();
+
+  // 보수작업현황 반영
+  (function renderFix(){
+    const { month_total, progress, target_day, yesterday, yesterday_delta, avg } = DATA.fix;
+    const rate = month_total ? Math.round((progress / month_total) * 100) : 0;
+
+    document.getElementById("fix_month_total").textContent = nf(month_total);
+    document.getElementById("fix_progress").textContent = nf(progress);
+    document.getElementById("fix_rate").textContent = rate + "%";
+    document.getElementById("fix_target_day").textContent = nf(target_day);
+    document.getElementById("fix_yesterday").textContent = nf(yesterday);
+    document.getElementById("fix_avg").textContent = nf(avg);
+
+    document.getElementById("fix_bar_a").textContent = nf(progress);
+    document.getElementById("fix_bar_b").textContent = nf(month_total);
+    document.getElementById("fix_bar").style.width = rate + "%";
+
+    const deltaEl = document.getElementById("fix_delta");
+    const sign = yesterday_delta >= 0 ? "+" : "";
+    deltaEl.textContent = `(${sign}${nf(yesterday_delta)})`;
+    deltaEl.className = "ml-1 font-semibold " + (yesterday_delta >= 0 ? "text-emerald-600" : "text-rose-600");
+  })();
+
+  // 입고
+  (function renderInbound(){
+    const { plan, done } = DATA.inbound;
+    const rate = plan ? Math.round((done / plan) * 100) : 0;
+
+    document.getElementById("in_plan").textContent = nf(plan);
+    document.getElementById("in_done").textContent = nf(done);
+    document.getElementById("in_rate").textContent = rate + "%";
+
+    document.getElementById("in_bar_a").textContent = nf(done);
+    document.getElementById("in_bar_b").textContent = nf(plan);
+    document.getElementById("in_bar").style.width = rate + "%";
+  })();
+
+  // 출고 예정/진행
+  (function renderOutbound(){
+    const p = DATA.outboundPlan;
+    const d = DATA.outboundDone;
+
+    document.getElementById("out_plan_20").textContent  = p.ft20;
+    document.getElementById("out_plan_40").textContent  = p.ft40;
+    document.getElementById("out_plan_lcl").textContent = p.lcl;
+    document.getElementById("out_plan_total").textContent = (p.ft20 + p.ft40 + p.lcl);
+
+    const rate20 = p.ft20 ? Math.round((d.ft20/p.ft20)*100) : 0;
+    const rate40 = p.ft40 ? Math.round((d.ft40/p.ft40)*100) : 0;
+    const ratel  = p.lcl  ? Math.round((d.lcl/p.lcl)*100) : 0;
+
+    document.getElementById("out_done_20").textContent = d.ft20;
+    document.getElementById("out_done_40").textContent = d.ft40;
+    document.getElementById("out_done_lcl").textContent = d.lcl;
+
+    document.getElementById("out_rate_20").textContent = rate20 + "%";
+    document.getElementById("out_rate_40").textContent = rate40 + "%";
+    document.getElementById("out_rate_lcl").textContent = ratel + "%";
+
+    document.getElementById("out_bar_20").style.width = rate20 + "%";
+    document.getElementById("out_bar_40").style.width = rate40 + "%";
+    document.getElementById("out_bar_lcl").style.width = ratel + "%";
+  })();
+
+  // 7일 출고정보 표
+  (function renderShip7(){
+    const tb = document.getElementById("ship7_tbody");
+    tb.innerHTML = "";
+
+    let s20=0, s40=0, sl=0;
+
+    DATA.ship7.forEach(r => {
+      s20 += r.ft20; s40 += r.ft40; sl += r.lcl;
+
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-slate-100";
+      tr.innerHTML = `
+        <td class="py-2 font-semibold text-slate-700 nowrap">${r.date}</td>
+        <td class="py-2 text-right">${r.ft20}대</td>
+        <td class="py-2 text-right">${r.ft40}대</td>
+        <td class="py-2 text-right">${r.lcl}대</td>
+      `;
+      tb.appendChild(tr);
+    });
+
+    document.getElementById("ship7_sum_20").textContent = s20;
+    document.getElementById("ship7_sum_40").textContent = s40;
+    document.getElementById("ship7_sum_lcl").textContent = sl;
+    document.getElementById("ship7_sum_total").textContent = (s20+s40+sl);
+  })();
+
+  // 월별 계획 합계
+  (function renderMonthlyPlan(){
+    const dec = DATA.monthlyPlan.dec;
+    const jan = DATA.monthlyPlan.jan;
+
+    document.getElementById("plan_dec_20").textContent = dec.ft20;
+    document.getElementById("plan_dec_40").textContent = dec.ft40;
+    document.getElementById("plan_dec_lcl").textContent = dec.lcl;
+
+    document.getElementById("plan_jan_20").textContent = jan.ft20;
+    document.getElementById("plan_jan_40").textContent = jan.ft40;
+    document.getElementById("plan_jan_lcl").textContent = jan.lcl;
+
+    const decSum = dec.ft20 + dec.ft40 + dec.lcl;
+    const janSum = jan.ft20 + jan.ft40 + jan.lcl;
+
+    document.getElementById("plan_dec_total").textContent = decSum + "대";
+    document.getElementById("plan_jan_total").textContent = janSum + "대";
+    document.getElementById("plan_total").textContent = (decSum + janSum);
+  })();
+</script>
+
+</body>
+</html>
