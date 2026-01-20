@@ -237,7 +237,7 @@ function renderOutboundTable() {
     if (item.status === "검수완료") cls += " bg-green-200 text-green-900 font-semibold ";
 
     // 중복 스캔 → 연초록 (최우선)
-    if (item.dup) cls += " bg-emerald-50 ";
+    if (item.dup) cls += " bg-yellow-100 ";
 
     // 마지막 스캔 강조
     if (item.barcode === lastScannedBarcode) cls += " ring-2 ring-amber-400 ";
