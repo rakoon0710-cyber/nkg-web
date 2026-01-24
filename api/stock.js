@@ -1,7 +1,9 @@
-// /api/stock.js — FINAL (HEADER SAFE + WMS 0 FIX)
-// ✅ 출고일은 원본 그대로 사용
+// /api/stock.js — FINAL COMPLETE
+// ✅ 인보이스 표시 빈칸 제거(조회키 우선 표시)
+// ✅ 자재코드 숫자/지수표기/소수/콤마 정규화
+// ✅ 출고일은 원본 그대로 표시
 // ✅ 필터/정렬은 "연도 포함 날짜"만 인정
-// ✅ 오늘 이전 제외 + ✅ 출고일 기준 정렬 + ✅ 안전
+// ✅ 오늘 이전 제외 + ✅ 출고일 기준 정렬 + ✅ WMS 0 FIX
 
 import { loadCsv } from "./_csv.js";
 
@@ -17,21 +19,42 @@ function bust(url) {
   return url.includes("?") ? `${url}&t=${t}` : `${url}?t=${t}`;
 }
 
-function normalizeInv(v) {
-  if (!v) return "";
-  return String(v).replace(/[^0-9]/g, "").replace(/^0+/, "");
-}
-
 function asText(v) {
   if (v === null || v === undefined) return "";
   return String(v).trim();
 }
 
 function asNum(v, def = 0) {
-  const s = asText(v);
-  if (!s) return def;
+  const s0 = asText(v);
+  if (!s0) return def;
+  const s = s0.replace(/,/g, "");
   const n = Number(s.replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : def;
+}
+
+/**
+ * ✅ 숫자 ID 정규화 (조회키/인보이스/문서번호/자재코드 공용)
+ * - "268377822.0" -> "268377822"
+ * - "2.68377822E+08" -> "268377822"
+ * - "268,377,822" -> "268377822"
+ */
+function normalizeId(v) {
+  if (v === null || v === undefined) return "";
+  let s = String(v).trim();
+  if (!s) return "";
+
+  if (/^\d+$/.test(s)) return s.replace(/^0+/, "");
+
+  s = s.replace(/,/g, "");
+  if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
+
+  if (/[eE]/.test(s)) {
+    const n = Number(s);
+    if (Number.isFinite(n)) return String(Math.round(n)).replace(/^0+/, "");
+  }
+
+  const digits = s.replace(/[^0-9]/g, "");
+  return digits.replace(/^0+/, "");
 }
 
 // ✅ 헤더명 후보 중 값 뽑기 (공백/BOM/제로폭까지 무시)
@@ -52,9 +75,9 @@ function pickLoose(r, keys) {
 }
 
 // ✅ SAP/WMS에서 keyFull 형태가 다를 수 있어 후보 2개 생성
-function makeKeyCandidates(inv, mat) {
-  const i = normalizeInv(inv);
-  const m = asText(mat);
+function makeKeyCandidates(invOrKey, mat) {
+  const i = normalizeId(invOrKey);
+  const m = normalizeId(mat);
   if (!i || !m) return [];
   return [`${i}__${m}`, `${i}${m}`];
 }
@@ -97,11 +120,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, msg: "검색 키가 없습니다." });
     }
 
-    const searchKey = String(key).trim();
-    const isNumericSearch = /^[0-9]+$/.test(searchKey); // 숫자면 자재코드, 아니면 박스
+    const rawKey = String(key).trim();
+    const isNumericSearch = /^[0-9]+$/.test(rawKey); // 숫자면 자재코드, 아니면 박스
+
+    // ✅ 숫자 검색일 때는 자재코드 정규화 비교
+    const searchMatKey = isNumericSearch ? normalizeId(rawKey) : "";
+    const searchBoxKey = isNumericSearch ? "" : rawKey.toUpperCase();
+
     const today = getTodayYMD();
 
-    // 1) SAP & WMS 로드 (헤더 기반)
+    // 1) SAP & WMS 로드
     const [sapRows, wmsRows] = await Promise.all([
       loadCsv(bust(SAP_CSV_URL)),
       loadCsv(bust(WMS_CSV_URL)),
@@ -111,12 +139,12 @@ export default async function handler(req, res) {
     const wmsMap = new Map();
 
     for (const r of wmsRows || []) {
-      const inv = pickLoose(r, ["인보이스", "INV", "INVNO", "INV NO"]);
-      const mat = pickLoose(r, ["상품코드", "자재코드", "품목코드", "상품 코드", "자재 코드"]);
+      const inv = pickLoose(r, ["인보이스", "INV", "INVNO", "INV NO", "INVOICE"]);
+      const mat = pickLoose(r, ["상품코드", "자재코드", "자재번호", "품목코드", "상품 코드", "자재 코드", "MATERIAL", "MAT"]);
       const qty = asNum(pickLoose(r, ["수량", "QTY", "qty", "입고", "입고수량", "입고 수량"]), 0);
 
-      // WMS에 keyFull이 있으면 우선
       const keyFullDirect = pickLoose(r, ["인보이스+자재코드", "인보이스+자재", "KEYFULL", "INV+MAT"]);
+
       const keys = [];
       if (keyFullDirect) keys.push(asText(keyFullDirect));
       keys.push(...makeKeyCandidates(inv, mat));
@@ -131,35 +159,54 @@ export default async function handler(req, res) {
     const matched = [];
 
     for (const r of sapRows || []) {
-      const keyFull = pickLoose(r, ["인보이스+자재코드", "인보이스+자재", "KEYFULL"]) || asText(r["인보이스+자재코드"]);
-      const invoice = pickLoose(r, ["인보이스"]) || asText(r["인보이스"]);
-      const dateStr = pickLoose(r, ["출고일"]) || asText(r["출고일"]);
+      const keyFull =
+        pickLoose(r, ["인보이스+자재코드", "인보이스+자재", "KEYFULL"]) ||
+        asText(r["인보이스+자재코드"]);
 
+      // ✅ 표시용/매칭용 조회키(인보이스 있으면 인보이스, 없으면 문서번호)
+      const invKeyRaw =
+        pickLoose(r, ["조회키", "INV_KEY", "KEY", "검색키"]) ||
+        pickLoose(r, ["인보이스", "INV", "INVOICE", "INVNO", "INV NO"]) ||
+        pickLoose(r, ["문서번호", "문서 번호", "출고문서", "납품문서", "DELIVERY", "Delivery"]) ||
+        asText(r["인보이스"]) ||
+        asText(r["문서번호"]);
+
+      const dateStr = pickLoose(r, ["출고일"]) || asText(r["출고일"]);
       const ymd = convertToYMD(dateStr);
 
       if (!ymd) continue;         // 연도 없는 날짜 제외
       if (ymd < today) continue;  // 오늘 이전 제외
 
       const country = pickLoose(r, ["국가"]) || asText(r["국가"]);
-      const material = pickLoose(r, ["자재코드", "자재번호", "상품코드"]) || asText(r["자재코드"]);
+
+      const materialRaw =
+        pickLoose(r, ["자재코드", "자재번호", "상품코드", "MATERIAL", "MAT"]) ||
+        asText(r["자재코드"]);
+      const materialNorm = normalizeId(materialRaw);
+
       const desc = pickLoose(r, ["자재내역", "품명", "상품명"]) || asText(r["자재내역"]);
       const outQty = asNum(pickLoose(r, ["출고"]) || r["출고"], 0);
-      const box = pickLoose(r, ["박스번호", "박스 번호"]) || asText(r["박스번호"]);
+
+      const box =
+        pickLoose(r, ["박스번호", "박스 번호", "BOX", "BOXNO", "BOX NO"]) ||
+        asText(r["박스번호"]);
+
       const work = pickLoose(r, ["작업여부", "작업 여부", "작업", "WORK"]) || "";
 
-      // 검색 조건
+      // ✅ 검색 조건
       if (isNumericSearch) {
-        if (material !== searchKey) continue;
+        if (materialNorm !== searchMatKey) continue;
       } else {
-        if (box.toUpperCase() !== searchKey.toUpperCase()) continue;
+        if (box.toUpperCase() !== searchBoxKey) continue;
       }
 
-      // ✅ WMS 매칭: keyFull 우선, 없으면 inv+mat 후보로 재시도
+      // ✅ WMS 매칭: keyFull 우선, 없으면 (조회키+자재코드) 후보로
       let inQty = 0;
+
       if (keyFull && wmsMap.has(keyFull)) {
         inQty = asNum(wmsMap.get(keyFull), 0);
       } else {
-        const cands = makeKeyCandidates(invoice, material);
+        const cands = makeKeyCandidates(invKeyRaw, materialNorm);
         for (const k of cands) {
           if (wmsMap.has(k)) {
             inQty = asNum(wmsMap.get(k), 0);
@@ -168,35 +215,35 @@ export default async function handler(req, res) {
         }
       }
 
-      const diff = inQty - outQty;
-
       matched.push({
         keyFull: keyFull || "",
-        invoice: invoice || "",
+        invoice: invKeyRaw || "",     // ✅ 빈칸 제거 (조회키 표시)
         country: country || "",
-        date: dateStr || "", // ✅ 표시: 원본 그대로
-        material: material || "",
+        date: dateStr || "",          // ✅ 원본 그대로 표시
+        material: materialRaw || "",
         box: box || "",
         desc: desc || "",
         outQty,
         inQty,
-        diff,
+        diff: inQty - outQty,
         work,
         _ymd: ymd, // 정렬용
       });
     }
 
     matched.sort((a, b) => a._ymd - b._ymd);
-
     const data = matched.map(({ _ymd, ...rest }) => rest);
 
-    // ✅ 디버그 모드 (원인 확인용)
     if (String(debug || "") === "1") {
       return res.status(200).json({
         ok: true,
         rows: data.length,
         data,
         meta: {
+          searchKeyRaw: rawKey,
+          isNumericSearch,
+          searchMatKey,
+          searchBoxKey,
           sapCount: sapRows?.length || 0,
           wmsCount: wmsRows?.length || 0,
           sapKeys0: sapRows?.[0] ? Object.keys(sapRows[0]) : [],
@@ -207,11 +254,7 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({
-      ok: true,
-      rows: data.length,
-      data,
-    });
+    return res.status(200).json({ ok: true, rows: data.length, data });
   } catch (err) {
     console.error("STOCK API ERROR:", err);
     return res.status(500).json({ ok: false, error: err.message });
