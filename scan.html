@@ -13,8 +13,8 @@
     body { background: #eef1f5; }
 
     @keyframes fadeIn {
-      from { opacity:0; transform:translateY(20px) scale(0.95);}
-      to   { opacity:1; transform:translateY(0) scale(1);}
+      from { opacity:0; transform:translateY(20px) scale(0.95); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
     }
     .animate-fadeIn { animation: fadeIn 0.25s ease-out; }
   </style>
@@ -48,9 +48,7 @@
       </div>
 
       <!-- 모바일 햄버거 -->
-      <button id="mobileNavBtn" class="md:hidden text-white text-2xl focus:outline-none">
-        ☰
-      </button>
+      <button id="mobileNavBtn" class="md:hidden text-white text-2xl focus:outline-none">☰</button>
 
     </div>
   </div>
@@ -75,20 +73,18 @@
 <!-- NAV 아래 여백 확보 -->
 <div class="h-14"></div>
 
+<!-- ✅ 모바일 메뉴 토글 -->
 <script>
   const mobileBtn = document.getElementById("mobileNavBtn");
   const mobileMenu = document.getElementById("mobileNavMenu");
-
-  mobileBtn.addEventListener("click", () => {
-    mobileMenu.classList.toggle("hidden");
-  });
+  mobileBtn.addEventListener("click", () => mobileMenu.classList.toggle("hidden"));
 </script>
 
 
 <!-- 메인 -->
 <main class="max-w-[1500px] mx-auto p-4 space-y-4 h-[calc(100vh-56px)] flex flex-col min-h-0">
 
-  <!-- 📌 상단: 인보이스 조회 + 요약 + 스캔 + 상태 -->
+  <!-- 상단: 인보이스 조회 + 요약 + 스캔 + 상태 -->
   <section class="bg-white rounded-xl shadow-sm border p-4 space-y-6 shrink-0">
 
     <!-- ▣ 인보이스 조회 -->
@@ -105,7 +101,7 @@
                  shadow-2xl text-center bg-slate-50"
           placeholder="INV NO" />
 
-        <!-- ✅ 조회 -->
+        <!--  조회 -->
         <button id="btnLoadInv"
           class="px-12 py-10
                  text-4xl font-black tracking-wide
@@ -115,7 +111,7 @@
           조회
         </button>
 
-        <!-- ✅ 특이사항 -->
+        <!--  특이사항 -->
         <button id="btnNoticeOpen"
           class="px-12 py-10
                  text-4xl font-black tracking-wide
@@ -125,7 +121,7 @@
           특이사항
         </button>
 
-        <!-- ✅ 저장(캡처) -->
+        <!--  저장(캡처) -->
         <button id="btnCapture"
           class="px-12 py-10
                  text-4xl font-black tracking-wide
@@ -138,11 +134,10 @@
       </div>
     </div>
 
-    <!-- ✅ 캡처할 영역: "상세내역(요약) + 하단 목록(스캔/출고)"만 저장하고 싶으면
-         여기부터 감싸면 됨 -->
+    <!--  캡처할 영역 -->
     <div id="captureArea" class="space-y-6">
 
-      <!-- ▣ 상단 요약 (2줄 헤더 스타일) -->
+      <!-- ▣ 상단 요약 -->
       <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
 
         <!-- 1줄 -->
@@ -151,17 +146,14 @@
             <div class="text-[11px] text-slate-500">인보이스</div>
             <div id="inv_no" class="text-base font-semibold whitespace-nowrap">-</div>
           </div>
-
           <div>
             <div class="text-[11px] text-slate-500">국가</div>
             <div id="country" class="text-base font-semibold whitespace-nowrap">-</div>
           </div>
-
           <div>
             <div class="text-[11px] text-slate-500">상차 위치</div>
             <div id="load_loc" class="text-base font-semibold whitespace-nowrap">-</div>
           </div>
-
           <div>
             <div class="text-[11px] text-slate-500">상차 시간</div>
             <div id="load_time" class="text-base font-semibold whitespace-nowrap">-</div>
@@ -176,12 +168,10 @@
             <div class="text-[11px] text-slate-500">컨테이너</div>
             <div id="container" class="text-base font-semibold whitespace-nowrap">-</div>
           </div>
-
           <div>
             <div class="text-[11px] text-slate-500">CBM</div>
             <div id="cbm" class="text-base font-semibold whitespace-nowrap">-</div>
           </div>
-
           <div>
             <div class="text-[11px] text-slate-500">출고수량(Box)</div>
             <div id="qty" class="text-base font-semibold whitespace-nowrap">-</div>
@@ -190,7 +180,7 @@
 
       </div>
 
-      <!-- ▣ 바코드 스캔 (캡처에 굳이 포함 안 하고 싶으면 captureArea 밖으로 빼면 됨) -->
+      <!-- 바코드 스캔 -->
       <div>
         <div class="text-sm font-semibold text-slate-600 mb-1">바코드 스캔</div>
         <input id="barcodeInput"
@@ -199,34 +189,27 @@
           placeholder="바코드를 스캔하세요" autofocus />
       </div>
 
-      <!-- ▣ 최근 스캔 + 누적 + 에러 + 중복 -->
+      <!--  최근 스캔 + 누적 + 에러 + 중복 -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 
-        <!-- 최근 -->
         <div class="bg-slate-50 rounded-xl border p-3">
           <div class="text-xs text-slate-500 mb-1">최근 스캔 결과</div>
           <div id="recentScanStatus" class="text-lg font-bold text-slate-700">-</div>
-          <div id="recentScanDetail"
-               class="text-[11px] text-slate-400 mt-1 leading-relaxed"></div>
+          <div id="recentScanDetail" class="text-[11px] text-slate-400 mt-1 leading-relaxed"></div>
         </div>
 
-        <!-- 누적 + 퍼센트 -->
         <div class="bg-slate-50 rounded-xl border p-3">
           <div class="text-xs text-slate-500 mb-1">누적 진행</div>
-
           <div class="flex items-baseline gap-2">
             <span id="progress_now" class="text-2xl font-bold text-slate-800">0</span>
             <span id="progress_total" class="text-xs text-slate-400">/ 0 품목</span>
-            <span id="progress_percent"
-                  class="text-sm font-semibold text-emerald-700 ml-2">0%</span>
+            <span id="progress_percent" class="text-sm font-semibold text-emerald-700 ml-2">0%</span>
           </div>
-
           <div class="mt-2 h-1.5 rounded-full bg-slate-200">
             <div id="progress_bar" class="h-full w-0 bg-sky-500"></div>
           </div>
         </div>
 
-        <!-- 에러 -->
         <div class="bg-slate-50 rounded-xl border p-3">
           <div class="text-xs text-slate-500 mb-1">미등록 바코드</div>
           <div class="flex items-baseline gap-2">
@@ -235,7 +218,6 @@
           </div>
         </div>
 
-        <!-- 중복 -->
         <div class="bg-slate-50 rounded-xl border p-3">
           <div class="text-xs text-slate-500 mb-1">중복 바코드</div>
           <div class="flex items-baseline gap-2">
@@ -246,24 +228,18 @@
 
       </div>
 
-      <!-- 📌 하단: 스캔 목록 + 출고 검수 목록 -->
+      <!--  하단: 스캔 목록 + 출고 검수 목록 -->
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
 
-        <!-- LEFT : 스캔된 목록 (스크롤 O) -->
         <div class="col-span-1 bg-white rounded-xl shadow-sm border p-4 flex flex-col min-h-0">
           <div class="text-xs text-slate-500 mb-2 shrink-0">스캔된 목록</div>
-
-          <div id="scanList"
-               class="flex-1 min-h-0 overflow-auto text-xs text-slate-700 space-y-1">
+          <div id="scanList" class="flex-1 min-h-0 overflow-auto text-xs text-slate-700 space-y-1">
             <div class="text-slate-400">아직 스캔 없음…</div>
           </div>
         </div>
 
-        <!-- RIGHT : 출고 검수 목록 (스크롤 O) -->
         <div class="col-span-2 bg-white rounded-xl shadow-sm border flex flex-col min-h-0">
-
-          <div class="px-4 py-2 border-b border-slate-200
-                      text-[11px] text-slate-500 flex justify-between shrink-0">
+          <div class="px-4 py-2 border-b border-slate-200 text-[11px] text-slate-500 flex justify-between shrink-0">
             <span>출고 검수 목록</span>
             <span>정렬: 번호 ↑</span>
           </div>
@@ -280,6 +256,7 @@
                     <th class="px-3 py-2 text-right whitespace-nowrap">SAP</th>
                     <th class="px-3 py-2 text-right whitespace-nowrap">WMS</th>
                     <th class="px-3 py-2 text-right whitespace-nowrap">비교</th>
+                    <th class="px-3 py-2 text-left whitespace-nowrap">작업</th>
                     <th class="px-3 py-2 text-left whitespace-nowrap">바코드</th>
                     <th class="px-3 py-2 text-left whitespace-nowrap">상태</th>
                   </tr>
@@ -296,21 +273,13 @@
     </div><!-- /#captureArea -->
 
   </section>
-
 </main>
 
 <!-- ===== 특이사항 모달 ===== -->
-<div id="noticeModal"
-     class="fixed inset-0 bg-black/60 hidden flex justify-center items-center z-[9999]">
+<div id="noticeModal" class="fixed inset-0 bg-black/60 hidden flex justify-center items-center z-[9999]">
   <div class="bg-white rounded-2xl p-8 w-[90%] max-w-[560px] shadow-2xl animate-fadeIn">
-
-    <h2 class="text-2xl font-extrabold mb-5 text-center text-red-600">
-      ⚠ 특이사항 안내
-    </h2>
-
-    <div id="noticeText"
-         class="text-lg leading-relaxed text-slate-800 whitespace-pre-line text-center"></div>
-
+    <h2 class="text-2xl font-extrabold mb-5 text-center text-red-600">⚠ 특이사항 안내</h2>
+    <div id="noticeText" class="text-lg leading-relaxed text-slate-800 whitespace-pre-line text-center"></div>
     <button id="noticeCloseBtn"
       class="mt-8 w-full py-3 text-lg bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-semibold">
       확인했습니다
@@ -318,9 +287,42 @@
   </div>
 </div>
 
+<!-- =====  미등록 바코드 확인 모달 (체크박스 확인 후 진행) ===== -->
+<div id="unregModal" class="fixed inset-0 bg-black/60 hidden flex justify-center items-center z-[10000]">
+  <div class="bg-white rounded-2xl p-8 w-[92%] max-w-[620px] shadow-2xl animate-fadeIn">
+
+    <h2 class="text-2xl font-extrabold mb-4 text-center text-red-600">
+      ❌ 미등록 바코드 확인
+    </h2>
+
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+      <div class="text-sm text-slate-500 mb-2">스캔된 바코드</div>
+      <div id="unregCode" class="text-xl font-black tracking-wide text-slate-900 break-all">-</div>
+
+      <div class="mt-3 text-sm text-slate-600 leading-relaxed">
+        이 바코드는 출고 목록에서 찾을 수 없습니다.<br/>
+        내용을 확인한 후 체크박스를 선택하고 확인을 눌러야 다음 스캔이 가능합니다.
+      </div>
+    </div>
+
+    <label class="mt-5 flex items-center gap-3 text-base font-semibold text-slate-800 select-none">
+      <input id="unregCheck" type="checkbox" class="w-5 h-5 accent-sky-600" />
+      미등록 바코드를 확인했습니다.
+    </label>
+
+    <button id="unregConfirmBtn" disabled
+      class="mt-6 w-full py-3 text-lg rounded-xl font-extrabold
+             bg-slate-300 text-slate-600 cursor-not-allowed
+             disabled:opacity-100">
+      확인 후 계속 진행
+    </button>
+  </div>
+</div>
+
+<!--  scan.js 연결 (스캔 로직은 여기서만) -->
 <script src="scan.js"></script>
 
-<!-- ✅ 저장(캡처): 인보이스 번호로 저장 -->
+<!--  저장(캡처): 인보이스 번호로 저장 -->
 <script>
   document.getElementById("btnCapture").addEventListener("click", async () => {
     try {
@@ -330,15 +332,12 @@
         return;
       }
 
-      // ✅ 파일명: 화면 표시 inv_no 우선 (정확) → 없으면 입력값
       const inv =
         (document.getElementById("inv_no")?.textContent || "").trim() ||
         (document.getElementById("invInput")?.value || "NO_INV").trim();
 
-      // 파일명 안전 처리(특수문자 제거)
       const safeInv = inv.replace(/[\\/:*?"<>|]/g, "_");
 
-      // 진행/오류/중복 suffix
       const nowCnt = document.getElementById("progress_now")?.textContent?.trim();
       const totalCnt = document.getElementById("progress_total")?.textContent?.trim();
       const errCnt = document.getElementById("error_count")?.textContent?.trim();
@@ -360,7 +359,7 @@
 
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");
-      a.download = `${safeInv}${suffix}.png`;  // ✅ 인보이스 번호가 파일명
+      a.download = `${safeInv}${suffix}.png`;
       a.click();
     } catch (e) {
       console.error(e);
